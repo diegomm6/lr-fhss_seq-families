@@ -59,7 +59,7 @@ if __name__ == "__main__":
     lempelGreenberg_fam2 = lempelGreenberg_fam2 *8
 
     lempelGreenberg_fam3 = np.concatenate((lempelGreenberg_fam, lempelGreenberg_fam2))
-    print(lempelGreenberg_fam3.shape)
+    #print(lempelGreenberg_fam3.shape)
     #for i,s in enumerate(lempelGreenberg_fam3):
     #    print(f"seq{i}: {s}")
 
