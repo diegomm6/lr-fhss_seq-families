@@ -1,5 +1,5 @@
 import numpy as np
-from galois import GLFSR, primitive_poly
+from galois import GLFSR, Poly
 from base import numberToBase
 
 """
@@ -71,13 +71,13 @@ and integers k,n s.t. 1 <= k <= n
 """
 class LempelGreenbergFamily():
 
-    def __init__(self, p, n, k) -> None:
+    def __init__(self, p, n, k, poly:Poly) -> None:
         assert k <= n, "condition k <= n is not met"
         self.p = p
         self.n = n
         self.k = k
         self.q = self.p**self.n - 1
-        self.lfsr = GLFSR(primitive_poly(self.p, self.n).reverse())
+        self.lfsr = GLFSR(poly.reverse())
 
     # return current lfsr state
     def get_lfsr_state(self):
