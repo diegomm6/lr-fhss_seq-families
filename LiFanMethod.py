@@ -1,5 +1,5 @@
 import numpy as np
-from base import gcd, get_min_gap
+from base import gcd, get_min_gap, filter_freq, split_seq
 
 """
 Generates a wide gap sequence with minimum gap e and optimal maximal hamming autocorrelation
@@ -54,25 +54,6 @@ class LiFanFamily():
         self.mingap = mingap
         self.maxfreq = maxfreq
 
-    # split the given sequence into a family of sequences with size q
-    def split_seq(self, seq):
-        family = []
-        i=0
-        j=self.q
-        while j < len(seq):
-            family.append(seq[i:j])
-            i+=self.q
-            j+=self.q
-
-        return np.array(family)
-    
-    # delete frequences above the maximum, raises error if it
-    # disrupts the minimum gap property
-    def filter_freq(self, seq):
-        newseq = np.delete(seq, np.where(seq >= self.maxfreq)[0])
-        assert get_min_gap(newseq) == self.mingap, "couldn't filter sequences while preserving minimum gap"
-        return newseq
-
 
     def get_2l_family(self, l, d):
 
@@ -83,11 +64,10 @@ class LiFanFamily():
         seq_2l = get_2l_sequence(l, d)
 
         if self.maxfreq < l:
-            seq_2l = self.filter_freq(seq_2l)
+            seq_2l = filter_freq(seq_2l, self.maxfreq, self.mingap)
 
-        return self.split_seq(seq_2l)
-
-
+        return split_seq(seq_2l, self.q)
+    
 
     def get_3l_family(self, l, d):
 
@@ -98,8 +78,9 @@ class LiFanFamily():
         seq_3l = get_2l_sequence(l, d)
 
         if self.maxfreq < l:
-            seq_3l = self.filter_freq(seq_3l)
+            seq_3l = filter_freq(seq_3l, self.maxfreq, self.mingap)
 
-        return self.split_seq(seq_3l)
+        return split_seq(seq_3l, self.q)
+
 
 

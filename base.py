@@ -123,3 +123,25 @@ def avg_maxHC_2fam(fam1, fam2):
         
     n = s**2
     return mean / n
+
+
+# delete frequences above the maximum, raises error if it
+# disrupts the minimum gap property
+def filter_freq(seq, maxfreq, mingap):
+    newseq = np.delete(seq, np.where(seq >= maxfreq)[0])
+    assert get_min_gap(newseq) == mingap, "couldn't filter sequences while preserving minimum gap"
+    return newseq
+
+
+# split the given sequence into a family of sequences with size q
+def split_seq(seq, q):
+    family = []
+    i=0
+    j=q
+    while j < len(seq):
+        family.append(seq[i:j])
+        i+=q
+        j+=q
+
+    return np.array(family)
+    
