@@ -6,6 +6,7 @@ from LempelGreenbergMethod import LempelGreenbergFamily
 from LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
 from LiFanMethod import LiFanFamily
 from HashMethod import HashFamily
+from WangMethod import WangFamily
 from simulation import Simulation
 
 # this script is designed to test multiple families a single network size
@@ -95,6 +96,16 @@ if __name__ == "__main__":
     lr_fhss_family = lr_fhssGenerator.get_lr_fhss_family()
     lr_fhss_family = lr_fhss_family *8
 
+
+    #########################################################################################
+    ##############################       WANG METHOD        #################################
+    #########################################################################################
+    p = 37
+    q = 31
+    w = 8
+    d = 8
+    wangGenerator = WangFamily(p=p, q=q, w=w, d=d)
+    wangFamily = wangGenerator.get_OCWGFHSfamily()
 
 
     #########################################################################################
