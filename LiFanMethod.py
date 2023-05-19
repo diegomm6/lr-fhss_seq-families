@@ -75,7 +75,7 @@ class LiFanFamily():
         crit2 = gcd(l, d) == 1 and gcd(l, d+1) == 1 and gcd(l, d+2) == 1
         assert crit1 and crit2, "criteria for 3l sequence not met"
 
-        seq_3l = get_2l_sequence(l, d)
+        seq_3l = get_3l_sequence(l, d)
 
         if self.maxfreq < l:
             seq_3l = filter_freq(seq_3l, self.maxfreq, self.mingap)

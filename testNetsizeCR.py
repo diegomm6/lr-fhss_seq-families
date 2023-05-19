@@ -14,12 +14,19 @@ from simulationCR import SimulationCR
 # sinlge family, using parallel computation
 
 def get_family():
+    d = 8
     q = 31
-    m = 384
-    hashGenerator = HashFamily(q=q)
-    hash_fam = hashGenerator.get_family(m)
+    maxfreq = 280
+    mingap = 8
+    liFanGenerator = LiFanFamily(q=q, maxfreq=maxfreq, mingap=mingap)
+    liFan_fam1 = liFanGenerator.get_3l_family(277, d)
+    liFan_fam2 = liFanGenerator.get_3l_family(281, d)
+    liFan_fam3 = liFanGenerator.get_3l_family(283, d)
+    liFan_fam4 = liFanGenerator.get_3l_family(287, d)
 
-    return hash_fam
+    liFan_fam5 = np.concatenate((liFan_fam1, liFan_fam2, liFan_fam3, liFan_fam4))
+
+    return liFan_fam5
 
 
 # test a single method for several number of nodes
@@ -32,7 +39,7 @@ def get_avg_packet_collision_rate(v):
     seq_length = 31
     startLimit = 500
     CR = 2
-    useGrid = True
+    useGrid = False
     family = get_family()
 
     nodes = int(v)
@@ -53,7 +60,7 @@ if __name__ == "__main__":
     
     netSizes = netSizesCR2
 
-    print('CR = 2; hash_fam')
+    print('CR = 2; liFan_fam5')
 
     pool = Pool(processes = len(netSizes))
     result = pool.map(get_avg_packet_collision_rate, netSizes)
@@ -63,4 +70,5 @@ if __name__ == "__main__":
     #for i in range(len(netSizes)):
         #print(f"nodes = {netSizes[i]}, collided packet rate = {result[i]}")
 
-    print('\n', result)
+    result2 = [round(i,6) for i in result]
+    print('\n', result2)
