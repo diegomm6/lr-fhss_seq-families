@@ -3,6 +3,7 @@ import numpy as np
 from base import *
 import galois
 from LempelGreenbergMethod import LempelGreenbergFamily
+from HashMethod import HashFamily
 from LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
 from LiFanMethod import LiFanFamily
 from WangMethod import WangFamily
@@ -13,18 +14,12 @@ from simulationCR import SimulationCR
 # sinlge family, using parallel computation
 
 def get_family():
-    p = 2
-    k = 5
-    n = 5
-    polys = galois.primitive_polys(p, n)
-    poly1 = next(polys)
-    poly2 = next(polys)
+    q = 31
+    m = 384
+    hashGenerator = HashFamily(q=q)
+    hash_fam = hashGenerator.get_family(m)
 
-    lempelGreenbergGenerator = LempelGreenbergFamily(p=p, n=n, k=k, poly=poly1)
-    lempelGreenberg_fam = lempelGreenbergGenerator.get_optimal_family()
-    lempelGreenberg_fam = lempelGreenberg_fam *8
-
-    return lempelGreenberg_fam
+    return hash_fam
 
 
 # test a single method for several number of nodes
@@ -58,7 +53,7 @@ if __name__ == "__main__":
     
     netSizes = netSizesCR2
 
-    print('CR = 2; lempelGreenberg_fam')
+    print('CR = 2; hash_fam')
 
     pool = Pool(processes = len(netSizes))
     result = pool.map(get_avg_packet_collision_rate, netSizes)

@@ -8,15 +8,32 @@ class Population():
         self.useGrid = useGrid
         self.numOCW = numOCW
         self.numGrids = numGrids
-        self.nodes = self.init_nodes(n, startLimit)
+        self.n = n
+        self.startLimit = startLimit
+        self.nodes = self.init_nodes()
 
 
-    def init_nodes(self, n, startLimit):
+    def restart(self):
+
+        node : Node
+        for node in self.nodes:
+
+            node.startTime = np.random.randint(self.startLimit)
+            seq_id = np.random.randint(len(self.family))
+            node.seq = self.family[seq_id]
+
+            node.ocw = np.random.randint(self.numOCW)
+            node.grid = 0
+            if self.useGrid:
+                node.grid = np.random.randint(self.numGrids)
+        
+
+    def init_nodes(self):
 
         nodes = []
-        for _ in range(n):
+        for _ in range(self.n):
 
-            startTime = np.random.randint(startLimit)
+            startTime = np.random.randint(self.startLimit)
             seq_id = np.random.randint(len(self.family))
             seq = self.family[seq_id]
 

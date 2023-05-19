@@ -47,6 +47,7 @@ class SimulationCR():
 
             txData = self.run()
 
+            node : Node
             collided_packets = 0
             for node in self.population.nodes:
 
@@ -60,6 +61,7 @@ class SimulationCR():
                     collided_packets += 1
 
             avg_collided_rate += collided_packets / len(self.population.nodes)
+            self.population.restart()
         
         return avg_collided_rate / runs
 
@@ -76,7 +78,8 @@ class SimulationCR():
                                   self.numOBW,
                                   self.startLimit + self.seq_length))
         
-        for node in self.population.nodes:            
+        node : Node
+        for node in self.population.nodes:
             for t, obw in enumerate(node.seq):
                 transmissions[node.ocw][obw + node.grid][node.startTime + t] += 1
 
