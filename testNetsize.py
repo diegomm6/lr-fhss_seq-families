@@ -1,13 +1,13 @@
 from multiprocessing import Pool
 import numpy as np
-from base import *
 import galois
-from LempelGreenbergMethod import LempelGreenbergFamily
-from LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
-from LiFanMethod import LiFanFamily
-from HashMethod import HashFamily
-from WangMethod import WangFamily
-from simulation import Simulation
+from src.base import *
+from src.families.LempelGreenbergMethod import LempelGreenbergFamily
+from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
+from src.families.LiFanMethod import LiFanFamily
+from src.families.HashMethod import HashFamily
+from src.families.WangMethod import WangFamily
+from src.simulation import Simulation
 
 # this script is designed to test multiple values for the network size for a 
 # sinlge family, using parallel computation

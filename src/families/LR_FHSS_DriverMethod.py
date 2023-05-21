@@ -1,5 +1,5 @@
 import numpy as np
-from multiprocessing import Pool
+from src.families.FHSfamily import FHSfamily
 
 n_grid = 35
 lr_fhss_lfsr_poly1 = [33, 45, 48, 51, 54, 57]
@@ -47,14 +47,15 @@ this model is currently limited for the case with 280 obw and 8 grids, so 35 cha
 which allows 384 different sequences of a yet undetermined period
 The only parameter is the length of the sequences to be generated
 """
-class LR_FHSS_DriverFamily():
+class LR_FHSS_DriverFamily(FHSfamily):
 
     def __init__(self, q) -> None:
-        self.q = q
+        super().__init__(q)
+        self.m = 384
 
-    def get_lr_fhss_family(self):
+    def get_family(self):
         fam = []
-        for id in range(384):
+        for id in range(self.m):
             fam.append(get_lr_fhss_seq(id, self.q))
 
         return np.array(fam)

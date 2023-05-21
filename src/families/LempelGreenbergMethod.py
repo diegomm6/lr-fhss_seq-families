@@ -1,6 +1,7 @@
 import numpy as np
 from galois import GLFSR, Poly
-from base import numberToBase
+from src.families.FHSfamily import FHSfamily
+from src.base.base import numberToBase
 
 """
 maps a sequence X in P^k to a value in P_k
@@ -69,14 +70,15 @@ over an alphabet A of size |A| = p^k
 for any given prime number p
 and integers k,n s.t. 1 <= k <= n
 """
-class LempelGreenbergFamily():
+class LempelGreenbergFamily(FHSfamily):
 
     def __init__(self, p, n, k, poly:Poly) -> None:
         assert k <= n, "condition k <= n is not met"
         self.p = p
         self.n = n
         self.k = k
-        self.q = self.p**self.n - 1
+        q = self.p**self.n - 1
+        super().__init__(q)
         self.lfsr = GLFSR(poly.reverse())
 
     # return current lfsr state
@@ -87,6 +89,6 @@ class LempelGreenbergFamily():
     def get_msequence(self):
         return self.lfsr.step(self.q)
 
-    def get_optimal_family(self):
+    def get_family(self):
         msequence = np.array(self.get_msequence())
         return optimal_family(msequence, self.p, self.k)

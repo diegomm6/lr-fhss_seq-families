@@ -1,5 +1,6 @@
 import numpy as np
-from base import gcd, get_min_gap, filter_freq, split_seq
+from src.families.FHSfamily import FHSfamily
+from src.base.base import gcd, get_min_gap, filter_freq, split_seq
 
 """
 Generates a wide gap sequence with minimum gap e and optimal maximal hamming autocorrelation
@@ -47,10 +48,10 @@ of sequences of size q
 [2] Li, P., Fan, C., Mesnager, S., Yang, Y., & Zhou, Z. (2021). Constructions of optimal
 uniform wide-gap frequency-hopping sequences. IEEE Transactions on Information Theory, 68(1), 692-700.
 """
-class LiFanFamily():
+class LiFanFamily(FHSfamily):
 
     def __init__(self, q, maxfreq, mingap) -> None:
-        self.q = q
+        super().__init__(q)
         self.mingap = mingap
         self.maxfreq = maxfreq
 
@@ -70,7 +71,7 @@ class LiFanFamily():
     
 
     def get_3l_family(self, l, d):
-
+        
         crit1 = 1 < d < (l-1)/2
         crit2 = gcd(l, d) == 1 and gcd(l, d+1) == 1 and gcd(l, d+2) == 1
         assert crit1 and crit2, "criteria for 3l sequence not met"
@@ -83,4 +84,11 @@ class LiFanFamily():
         return split_seq(seq_3l, self.q)
 
 
+    def get_family(self, l, d, method):
+        if method=='2l':
+            return self.get_2l_family(l, d)
+        elif method=='3l':
+            return self.get_3l_family(l, d)
+        else:
+            raise Exception(f"Error: wrong method '{method}' given")
 

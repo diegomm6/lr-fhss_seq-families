@@ -1,6 +1,7 @@
 import numpy as np
 import galois
-from base import get_min_gap
+from src.families.FHSfamily import FHSfamily
+from src.base.base import get_min_gap
 
 """
 The method proposed in [1] produces afamily of OCWGFHS by mergining all the OCWGFHS
@@ -10,7 +11,7 @@ sets obtained for each primitive element in the filed GF(p), given p, w, and d
 Wide-Gap One-Coincidence Frequency-Hopping Sequence. In 2022 10th International Workshop
 on Signal Design and Its Applications in Communications (IWSDA) (pp. 1-5). IEEE.
 """
-class WangFamily():
+class WangFamily(FHSfamily):
 
     def __init__(self, p, q, w, d) -> None:
 
@@ -18,8 +19,8 @@ class WangFamily():
         assert d>1 and d<p//4, "d must satisfy 2<=d<=p//4"
         assert q<p, "the length q of the sequences must be less than p"
 
+        super().__init__(q)
         self.p = p
-        self.q = q
         self.w = w
         self.d = d
         self.p_elements = galois.GF(p).primitive_elements
@@ -33,7 +34,7 @@ class WangFamily():
         return fhs
 
 
-    def get_OCWGFHSfamily(self):
+    def get_family(self):
 
         WGFHSfamily = []
         for a in self.p_elements:

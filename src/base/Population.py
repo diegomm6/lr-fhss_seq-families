@@ -1,4 +1,4 @@
-from Node import Node
+from src.base.Node import Node
 import numpy as np
 
 class Population():

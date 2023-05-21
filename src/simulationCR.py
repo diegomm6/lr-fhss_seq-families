@@ -1,6 +1,8 @@
 import numpy as np
-from Population import Population
-from Node import Node
+
+from src.base.Node import Node
+from src.base.Population import Population
+
 
 class SimulationCR():
     """
@@ -31,7 +33,7 @@ class SimulationCR():
         self.population = Population(family, useGrid, numOCW, numGrids, nodes, startLimit)
 
 
-    def get_thershold(self, CR):
+    def get_thershold(self, CR : int) -> int:
         # 1/3 of packets needed
         if CR == 1:
             return self.seq_length - np.ceil(self.seq_length / 3)
@@ -40,7 +42,7 @@ class SimulationCR():
         return self.seq_length - np.ceil(2 * self.seq_length / 3)
 
 
-    def get_packet_collision_rate(self, runs):
+    def get_packet_collision_rate(self, runs : int) -> float:
 
         avg_collided_rate = 0
         for r in range(runs):

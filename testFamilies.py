@@ -1,13 +1,13 @@
 from multiprocessing import Pool
 import numpy as np
-from base import *
 import galois
-from LempelGreenbergMethod import LempelGreenbergFamily
-from LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
-from LiFanMethod import LiFanFamily
-from HashMethod import HashFamily
-from WangMethod import WangFamily
-from simulation import Simulation
+from src.base import *
+from src.families.LempelGreenbergMethod import LempelGreenbergFamily
+from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
+from src.families.LiFanMethod import LiFanFamily
+from src.families.HashMethod import HashFamily
+from src.families.WangMethod import WangFamily
+from src.simulation import Simulation
 
 # this script is designed to test multiple families a single network size
 # using parallel computation
@@ -52,11 +52,11 @@ if __name__ == "__main__":
     poly2 = next(polys)
 
     lempelGreenbergGenerator = LempelGreenbergFamily(p=p, n=n, k=k, poly=poly1)
-    lempelGreenberg_fam = lempelGreenbergGenerator.get_optimal_family()
+    lempelGreenberg_fam = lempelGreenbergGenerator.get_family()
     lempelGreenberg_fam = lempelGreenberg_fam *8
 
     lempelGreenbergGenerator2 = LempelGreenbergFamily(p=p, n=n, k=k, poly=poly2)
-    lempelGreenberg_fam2 = lempelGreenbergGenerator2.get_optimal_family()
+    lempelGreenberg_fam2 = lempelGreenbergGenerator2.get_family()
     lempelGreenberg_fam2 = lempelGreenberg_fam2 *8
 
     lempelGreenberg_fam3 = np.concatenate((lempelGreenberg_fam, lempelGreenberg_fam2))
@@ -70,13 +70,12 @@ if __name__ == "__main__":
     #########################################################################################
     d = 8
     q = 31
-    maxfreq = 280
-    mingap = 8
-    liFanGenerator = LiFanFamily(q=q, maxfreq=maxfreq, mingap=mingap)
-    liFan_fam1 = liFanGenerator.get_3l_family(277, d)
-    liFan_fam2 = liFanGenerator.get_3l_family(281, d)
-    liFan_fam3 = liFanGenerator.get_3l_family(283, d)
-    liFan_fam4 = liFanGenerator.get_3l_family(287, d)
+    method = '3l'
+    liFanGenerator = LiFanFamily(q=q, maxfreq=280, mingap=8)
+    liFan_fam1 = liFanGenerator.get_family(277, d, method)
+    liFan_fam2 = liFanGenerator.get_family(281, d, method)
+    liFan_fam3 = liFanGenerator.get_family(283, d, method)
+    liFan_fam4 = liFanGenerator.get_family(287, d, method)
 
     liFan_fam5 = np.concatenate((liFan_fam1, liFan_fam2, liFan_fam3, liFan_fam4))
 
@@ -93,7 +92,7 @@ if __name__ == "__main__":
     ##############################      DRIVER METHOD       #################################
     #########################################################################################
     lr_fhssGenerator = LR_FHSS_DriverFamily(q)
-    lr_fhss_family = lr_fhssGenerator.get_lr_fhss_family()
+    lr_fhss_family = lr_fhssGenerator.get_family()
     lr_fhss_family = lr_fhss_family *8
 
 
@@ -105,7 +104,7 @@ if __name__ == "__main__":
     w = 8
     d = 8
     wangGenerator = WangFamily(p=p, q=q, w=w, d=d)
-    wangFamily = wangGenerator.get_OCWGFHSfamily()
+    wangFamily = wangGenerator.get_family()
 
 
     #########################################################################################
