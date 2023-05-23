@@ -18,7 +18,7 @@ def get_family():
     l = 281
     d = 8
     liFanGenerator = LiFanFamily(q=q, maxfreq=280, mingap=8)
-    liFan_fam1 = liFanGenerator.get_family(l, d, '2l')
+    liFan_fam1 = liFanGenerator.get_family(l, d, '3l')
 
     return liFan_fam1
 
@@ -58,17 +58,14 @@ if __name__ == "__main__":
                          2.75e3, 3e3, 3.33e3, 3.66e3, 4e3, 4.33e3, 4.66e3,
                          5e3, 5.5e3, 6e3, 6.5e3, 7e3, 7.5e3, 8e3, 9e3, 1e4]
     
-    netSizes = [1e2]
+    netSizes = netSizesCR2
 
-    print('CR = 2; liFan_fam1')
+    print('CR = 2; liFan_fam')
 
     pool = Pool(processes = len(netSizes))
     result = pool.map(get_avg_packet_collision_rate, netSizes)
     pool.close()
     pool.join()
-
-    #for i in range(len(netSizes)):
-        #print(f"nodes = {netSizes[i]}, collided packet rate = {result[i]}")
 
     result2 = [round(i,6) for i in result]
     print('\n', result2)

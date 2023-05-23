@@ -4,7 +4,7 @@ from src.base.Node import Node
 from src.base.Population import Population
 
 
-class SimulationCR():
+class SimulationCRgranularity():
     """
     A class that simulates time slotted communication with coding rate
 
@@ -18,6 +18,7 @@ class SimulationCR():
         startLimit (int): The start limit.
         seq_length (int): The sequence length.
         CR (int): Coding rate
+        granularity(int): internal time slot subdivisions  
 
     Methods:
         get_thershold(): determine the minimum number of fragments required according to the CR
@@ -25,14 +26,16 @@ class SimulationCR():
         run(): Runs the simulation and returns a NumPy array of transmissions.
     """
 
-    def __init__(self, nodes, family, useGrid, numOCW, numOBW, numGrids, startLimit, seq_length, CR) -> None:
+    def __init__(self, nodes, family, useGrid, numOCW, numOBW, numGrids,
+                  startLimit, seq_length, CR, granularity) -> None:
         self.numOCW = numOCW
         self.numOBW = numOBW
         self.startLimit = startLimit
         self.seq_length = seq_length
+        self.granularity = granularity
 
         self.threshold = self.get_thershold(CR)
-        self.population = Population(family, useGrid, numOCW, numGrids, nodes, startLimit, granularity=0)
+        self.population = Population(family, useGrid, numOCW, numGrids, nodes, startLimit, granularity)
 
 
     def get_thershold(self, CR : int) -> int:
@@ -55,10 +58,17 @@ class SimulationCR():
             collided_packets = 0
             for node in self.population.nodes:
 
-                collided_fragments = 0      
+                collided_fragments = 0
                 for t, obw in enumerate(node.seq):
+                    
+                    collided = False
+                    slot = node.gran + self.granularity * (node.startTime + t)
+                    for g in range(self.granularity):
+                        
+                        if txData[node.ocw][obw + node.grid][slot + g] != 1:
+                            collided = True
 
-                    if txData[node.ocw][obw + node.grid][node.startTime + t] != 1:
+                    if collided:
                         collided_fragments += 1
                     
                 if collided_fragments > self.threshold:
@@ -77,14 +87,19 @@ class SimulationCR():
         Returns:
             A NumPy array of transmissions.
         """
-
+        timeSlots = self.granularity * (self.startLimit + self.seq_length + 1)
         transmissions = np.zeros((self.numOCW,
                                   self.numOBW,
-                                  self.startLimit + self.seq_length))
+                                  timeSlots))
         
         node : Node
         for node in self.population.nodes:
+
             for t, obw in enumerate(node.seq):
-                transmissions[node.ocw][obw + node.grid][node.startTime + t] += 1
+
+                slot = node.gran + self.granularity * (node.startTime + t)
+                for g in range(self.granularity):
+
+                    transmissions[node.ocw][obw + node.grid][slot + g] += 1
 
         return transmissions

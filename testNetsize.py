@@ -18,7 +18,7 @@ def get_family():
     w = 8
     d = 8
     wangGenerator = WangFamily(p=p, q=q, w=w, d=d)
-    wangFamily = wangGenerator.get_OCWGFHSfamily()
+    wangFamily = wangGenerator.get_family()
 
     return wangFamily
 
