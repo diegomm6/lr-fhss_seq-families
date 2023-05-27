@@ -145,3 +145,16 @@ def split_seq(seq, q):
 
     return np.array(family)
     
+
+# calculate the number of frequency hops for the payload
+# as a function of its size and the coding rate
+def numHops(payload_length, CR):
+
+    assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
+
+    length_bits = ( payload_length + 2 ) * 8 + 6
+    length_bits *= (3/CR)
+
+    nb_hops_out = ( length_bits + 47 ) // 48
+
+    return nb_hops_out

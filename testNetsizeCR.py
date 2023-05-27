@@ -7,7 +7,7 @@ from src.families.HashMethod import HashFamily
 from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
 from src.families.LiFanMethod import LiFanFamily
 from src.families.WangMethod import WangFamily
-from src.simulationCR import SimulationCR
+from src.models.simulationCR import SimulationCR
 
 
 # this script is designed to test multiple values for the network size for a 

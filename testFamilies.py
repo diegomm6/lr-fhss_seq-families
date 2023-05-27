@@ -7,7 +7,7 @@ from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
 from src.families.LiFanMethod import LiFanFamily
 from src.families.HashMethod import HashFamily
 from src.families.WangMethod import WangFamily
-from src.simulation import Simulation
+from src.models.simulation import Simulation
 
 # this script is designed to test multiple families a single network size
 # using parallel computation

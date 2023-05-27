@@ -103,3 +103,6 @@ class SimulationCRgranularity():
                     transmissions[node.ocw][obw + node.grid][slot + g] += 1
 
         return transmissions
+    
+
+    

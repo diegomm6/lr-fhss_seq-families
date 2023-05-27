@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from src.families.LiFanMethod import LiFanFamily
 from src.families.LempelGreenbergMethod import LempelGreenbergFamily
 from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
-from src.models.simulationCRgranularity import SimulationCRgranularity
+from src.base.LoRaNetwork import LoRaNetwork
 
 
 def get_family():
@@ -29,27 +29,29 @@ def get_family():
 def get_avg_packet_collision_rate(v):
 
     runs = 30
+    simTime = 500
     numOCW = 7
     numOBW = 280
     numGrids = 8
-    seq_length = 31
-    startLimit = 500
-    granularity = 8
+    max_seq_length = 31
+    granularity = 4
+    numDecoders = 1
+    decodeCapacity = 8
     CR = 2
-
     useGrid = True
     family = get_family()
 
-    nodes = int(v)
+    numNodes = int(v)
 
-    simulation = SimulationCRgranularity(nodes=nodes, family=family, useGrid=useGrid, numOCW=numOCW, numOBW=numOBW,
-                              numGrids=numGrids, startLimit=startLimit, seq_length=seq_length, CR=CR, granularity=granularity)
-    
-    colrate = simulation.get_packet_collision_rate(runs)
+    network = LoRaNetwork(numNodes, family, useGrid, numOCW, numOBW, numGrids,
+                          CR, granularity, max_seq_length, simTime, numDecoders, decodeCapacity)
 
-    #print(f"finished for n={nodes}")
 
-    return colrate
+    network.run()
+
+    decoded = network.get_decoded_transmissions()
+
+    return decoded / numNodes
 
 
 if __name__ == "__main__":
@@ -72,18 +74,4 @@ if __name__ == "__main__":
 
     result2 = [round(i,6) for i in result]
     print('\n', result2)
-
-
-    """
-    transmissions = simulation.run()
-    plt.figure(figsize=(18,12))
-    sns.heatmap(transmissions[0])
-    plt.title('transmissions using 1 OCW channel')
-    plt.xlabel(f'slots (w granularity={granularity})')
-    plt.ylabel('OBW')
-    plt.show()
-    #plt.savefig('transmissions-driver.png')
-    plt.close('all')
-    """
-    
 
