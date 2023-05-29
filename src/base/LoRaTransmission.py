@@ -13,12 +13,15 @@ class LoRaTransmission():
         sequence (list): sequence of frequence hopping channels 
     """
 
-    def __init__(self, id, node_id, startSlot, ocw, grid, numFragments, sequence) -> None:
+    def __init__(self, id, node_id, startSlot, ocw, grid, payload_size,
+                 numFragments, sequence) -> None:
         self.id = id
         self.node_id = node_id
         self.startSlot = startSlot
         self.ocw = ocw
         self.grid = grid
+        self.payload_size = payload_size
         self.numFragments = numFragments
         self.sequence = sequence
-
+    
+    

@@ -17,7 +17,7 @@ class LoRaNetwork():
 
         assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
 
-        startLimit = simTime - max_seq_length - granularity -30
+        startLimit = simTime - (granularity * max_seq_length)
         self.nodes = [LoRaNode(i, CR, numOCW, useGrid, numGrids, startLimit)
                       for i in range(numNodes)]
 
@@ -58,14 +58,10 @@ class LoRaNetwork():
         collision_events = self.get_collision_events(collision_matrix)
         end_events = self.get_end_events(transmissions)
 
-        start_times = [ev._time for ev in start_events]
-        collision_times = [ev._time for ev in collision_events]
-        end_times = [ev._time for ev in end_events]
-
         events = start_events + collision_events + end_events
-        event_times = start_times + collision_times + end_times
 
-        sorted_events = [event for _, event in sorted(zip(event_times, events))]
+        sorted_events = sorted(events)
+        #for ev in sorted_events: print(ev)
 
         return sorted_events
         
@@ -97,8 +93,7 @@ class LoRaNetwork():
 
         collision_events = []
         for t in range(self.simTime):
-
-            sub_collision_matrix = collision_matrix[:][:][t]
+            sub_collision_matrix = collision_matrix[:,:,t]
             indeces = np.where(sub_collision_matrix > 1)
 
             for ocw, obw in zip(indeces[0], indeces[1]):
@@ -118,5 +113,18 @@ class LoRaNetwork():
     
 
     def get_decoded_transmissions(self):
-        return self.gateway.get_decoded_transmissions()
+        return self.gateway.get_decoded_packets()
+    
+
+    def get_decoded_bytes(self):
+        return self.gateway.get_decoded_bytes()
+    
+
+    def restart(self):
+
+        self.gateway.restart()
+
+        node : LoRaNode
+        for node in self.nodes:
+            node.restart()
     

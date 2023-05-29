@@ -10,11 +10,18 @@ class LoRaNode():
         self.useGrid = useGrid
         self.numGrids = numGrids
         self.startLimit = startLimit
+        self.sent_packets = 0
+        self.sent_payload_bytes = 0
+
+
+    def restart(self):
+        self.sent_packets = 0
+        self.sent_payload_bytes = 0
 
 
     def numHops(self, payload_length):
         """
-        calculate the number of frequency hops for the payload
+        Calculate the number of frequency hops for the payload
         as a function of its size and the coding rate
         """
 
@@ -44,15 +51,18 @@ class LoRaNode():
 
         startTime = np.random.randint(self.startLimit)
 
-        # payload length is set to 58 bytes when CR1 is used
+        # payload size is set to 58 bytes when CR1 is used
         # and 121 bytes for CR2, this ensures 31 fragments
-        payload_length = 58
+        payload_size = 58
         if self.CR == 2:
-            payload_length = 121
+            payload_size = 121
 
-        numFragments = self.numHops(payload_length)
+        self.sent_packets += 1
+        self.sent_payload_bytes += payload_size
 
-        tx = LoRaTransmission(self.id, self.id, startTime, ocw,
-                              grid, numFragments, sequence)
+        numFragments = self.numHops(payload_size)
+
+        tx = LoRaTransmission(self.id, self.id, startTime, ocw, grid,
+                              payload_size, numFragments, sequence)
 
         return [tx]

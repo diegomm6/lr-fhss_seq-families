@@ -25,18 +25,16 @@ def get_family():
     return driver_family
 
 
-# test a single method for several number of nodes
-def get_avg_packet_collision_rate(v):
-
+def get_avg_decoding_rate(v):
     runs = 30
-    simTime = 500
+    simTime = 531
     numOCW = 7
     numOBW = 280
     numGrids = 8
     max_seq_length = 31
     granularity = 4
     numDecoders = 1
-    decodeCapacity = 8
+    decodeCapacity = 16
     CR = 2
     useGrid = True
     family = get_family()
@@ -46,32 +44,27 @@ def get_avg_packet_collision_rate(v):
     network = LoRaNetwork(numNodes, family, useGrid, numOCW, numOBW, numGrids,
                           CR, granularity, max_seq_length, simTime, numDecoders, decodeCapacity)
 
+    avg_decode_rate = 0
+    for r in range(runs):
+        network.run()
+        avg_decode_rate += network.get_decoded_transmissions()
+        network.restart()
 
-    network.run()
-
-    decoded = network.get_decoded_transmissions()
-
-    return decoded / numNodes
+    return avg_decode_rate / numNodes / runs
 
 
 if __name__ == "__main__":
 
-    netSizesCR1 = [1e3, 2e3, 5e3, 7.5e3, 1e4, 1.25e4, 1.5e4, 1.75e4, 2e4, 2.25e4, 2.5e4, 2.75e4,
-                   3e4, 3.33e4, 3.66e4, 4e4, 4.5e4, 5e4, 5.5e4, 6e4, 7e4, 8e4, 9e4, 1e5]
+    netSizesCR1 = np.logspace(1.0, 4.0, num=50)    
 
-    netSizesCR2 = [1e3, 2e3, 3e3, 4e3, 5e3, 6e3, 7e3, 8e3, 9e3, 1e4, 1.2e4, 1.4e4, 1.6e4,
-                   1.8e4, 2e4, 2.33e4, 2.66e4, 3e4, 3.5e4, 4e4, 4.5e4, 5e4, 6e4, 1e5]
-    
-
-    netSizes = [1e4]
+    netSizes = netSizesCR1
 
     print('CR = 2; driver_family')
 
     pool = Pool(processes = len(netSizes))
-    result = pool.map(get_avg_packet_collision_rate, netSizes)
+    result = pool.map(get_avg_decoding_rate, netSizes)
     pool.close()
     pool.join()
 
     result2 = [round(i,6) for i in result]
     print('\n', result2)
-

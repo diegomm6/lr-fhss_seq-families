@@ -5,12 +5,23 @@ from src.base.LoRaTransmission import LoRaTransmission
 class Processor():
 
     def __init__(self, CR, granularity) -> None:
+        self.CR = CR
+        self.granularity = granularity
         self._current_tx : LoRaTransmission = None
         self._current_collided_fragments = 0
         self.is_busy = False
-        self.decoded_tx = 0
-        self.CR = CR
-        self.granularity = granularity
+        self.collided_packets = 0
+        self.decoded_packets = 0
+        self.decoded_bytes = 0
+
+
+    def reset(self):
+        self._current_tx = None
+        self._current_collided_fragments = 0
+        self.is_busy = False
+        self.decoded_packets = 0
+        self.decoded_bytes = 0
+        self.collided_packets = 0
 
 
     def get_thershold(self, seq_length : int) -> int:
@@ -29,12 +40,19 @@ class Processor():
 
     def finish_decoding(self, end_event : EndEvent):
 
+        if not self.is_busy:
+            return
+
         if self._current_tx.id == end_event._transmission.id:
 
             thershold = self.get_thershold(end_event._transmission.numFragments)
             
             if self._current_collided_fragments <= thershold:
-                self.decoded_tx += 1
+                self.decoded_packets += 1
+                self.decoded_bytes += self._current_tx.payload_size
+
+            else:
+                self.collided_packets += 1
 
             self._current_tx = None
             self.is_busy = False

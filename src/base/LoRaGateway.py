@@ -12,7 +12,11 @@ class LoRaGateway():
         decodeCapacity (int): The number of simultaneous demodulations per decoder
 
     Methods:
-        init_processors(): initialize processor
+        init_processors(int, int): initialize processor
+        restart(): reinitialize processors
+        available_processor(): return next available processor
+        get_decoded_transmissions(): Return total successfully decoded transmissions
+        run(list[AbstractEvent]): Execute all given events
         
     """
 
@@ -25,10 +29,22 @@ class LoRaGateway():
 
 
     def init_processors(self, numDecoders, decodeCapacity):
+        """
+        Instanciate processors
+        """
         numProcessors = numDecoders * decodeCapacity
         processors = [Processor(self.threshold, self.granularity) for _ in range(numProcessors)]
         return processors
     
+
+    def restart(self):
+        """
+        Reset all processor to initial state
+        """
+        processor : Processor
+        for processor in self._processors:
+            processor.reset()
+
 
     def available_processor(self):
         """
@@ -43,19 +59,45 @@ class LoRaGateway():
         return None
     
 
-    def get_decoded_transmissions(self):
+    def get_collided_packets(self):
         """
-        Return total successfully decoded transmissions
+        Return total collided packets
         """
 
-        decoded = 0
+        collided_packets = 0
         processor : Processor
         for processor in self._processors:
-            decoded += processor.decoded_tx
+            collided_packets += processor.collided_packets
 
-        return decoded
-
+        return collided_packets
     
+
+    def get_decoded_packets(self):
+        """
+        Return total successfully decoded packets
+        """
+
+        decoded_packets = 0
+        processor : Processor
+        for processor in self._processors:
+            decoded_packets += processor.decoded_packets
+
+        return decoded_packets
+    
+
+    def get_decoded_bytes(self):
+        """
+        Return total successfully decoded bytes
+        """
+
+        decoded_bytes = 0
+        processor : Processor
+        for processor in self._processors:
+            decoded_bytes += processor.decoded_bytes
+
+        return decoded_bytes
+    
+
     def run(self, events):
         """
         Execute all given events
