@@ -3,10 +3,44 @@ from src.base.Event import *
 from src.base.LoRaTransmission import LoRaTransmission
 
 class Processor():
+    """
+    A class for decoding LoRa transmissions.
 
-    def __init__(self, CR, granularity) -> None:
-        self.CR = CR
+    Args:
+        granularity (int): The granularity of the decoding process, in slots.
+        CR (int): The coding rate of the LoRa transmissions.
+
+    Attributes:
+        granularity (int): The granularity of the decoding process, in slots.
+        CR (int): The coding rate of the LoRa transmissions.
+        _current_tx (LoRaTransmission): The current transmission being decoded.
+        _current_collided_fragments (int): The number of collided fragments for the current transmission.
+        is_busy (bool): Whether the processor is currently decoding a transmission.
+        collided_packets (int): The number of transmissions that have collided.
+        decoded_packets (int): The number of transmissions that have been decoded successfully.
+        decoded_bytes (int): The number of bytes that have been decoded successfully.
+
+    Methods:
+        reset(): Resets all counters and states to initial state.
+        get_thershold(seq_length: int) -> int:
+            Determine the minimum number of fragments needed to successfully
+            decode a packet. Two Coding Rates supported:
+                if CR==1 then a 1/3 of fragmenst are required
+                if CR==2 then a 2/3 of fragmenst are required
+        start_decoding(start_event : StartEvent) -> None:
+            Lock processor to the given transmission.
+        finish_decoding(end_event : EndEvent) -> None:
+            Check if the ending trasnmission handed by the gateway corresponds
+            to the one being decoded by this processor then determine the outcome
+            of the transmission and update counters 
+        handle_collision(collision_event : CollisionEvent) -> None:
+            Check if the current transmission being decoded matches the given
+            collision event and if so updates the counter of collided fragments
+    """
+
+    def __init__(self, granularity: int, CR: int) -> None:
         self.granularity = granularity
+        self.CR = CR
         self._current_tx : LoRaTransmission = None
         self._current_collided_fragments = 0
         self.is_busy = False
@@ -15,30 +49,46 @@ class Processor():
         self.decoded_bytes = 0
 
 
-    def reset(self):
+    def reset(self) -> None:
+        """
+        Reset all counters and states to initial state
+        """
+
         self._current_tx = None
         self._current_collided_fragments = 0
         self.is_busy = False
+        self.collided_packets = 0
         self.decoded_packets = 0
         self.decoded_bytes = 0
-        self.collided_packets = 0
 
 
     def get_thershold(self, seq_length : int) -> int:
-        # 1/3 of packets needed
-        if self.CR == 1:
-            return seq_length - np.ceil(seq_length / 3)
-        
-        # 2/3 of packets needed
-        return seq_length - np.ceil(2 * seq_length / 3)
+        """
+        Determine the minimum number of fragments needed to successfully
+        decode a packet. Two Coding Rates supported:
+            if CR==1 then a 1/3 of fragmenst are required
+            if CR==2 then a 2/3 of fragmenst are required
+        """
+
+        return seq_length - np.ceil(self.CR * seq_length / 3)
 
 
-    def start_decoding(self, start_event : StartEvent):
+    def start_decoding(self, start_event : StartEvent) -> None:
+        """
+        Lock processor to the given transmission
+        """
+
         self._current_tx = start_event._transmission
         self._current_collided_fragments = 0
         self.is_busy = True
+        
 
-    def finish_decoding(self, end_event : EndEvent):
+    def finish_decoding(self, end_event : EndEvent) -> None:
+        """
+        Check if the ending trasnmission handed by the gateway corresponds
+        to the one being decoded by this processor then determine the outcome
+        of the transmission and update counters 
+        """
 
         if not self.is_busy:
             return
@@ -58,7 +108,11 @@ class Processor():
             self.is_busy = False
     
 
-    def handle_collision(self, collision_event : CollisionEvent):
+    def handle_collision(self, collision_event : CollisionEvent) -> None:
+        """
+        Check if the current transmission being decoded matches the given
+        collision event and if so updates the counter of collided fragments
+        """
 
         # if process is not receiving a signal return
         # else, current_tx is not none
@@ -76,4 +130,4 @@ class Processor():
         if self._current_tx.ocw == ocw and current_obw == obw:
             self._current_collided_fragments += 1
 
-        
+    

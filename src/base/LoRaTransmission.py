@@ -10,11 +10,11 @@ class LoRaTransmission():
         ocw (int): OCW channel where transmission takes place
         grid (int): grid number used by the transmission
         numFragments (int): number of payload fragments
-        sequence (list): sequence of frequence hopping channels 
+        sequence (list[int]): sequence of frequence hopping channels 
     """
 
-    def __init__(self, id, node_id, startSlot, ocw, grid, payload_size,
-                 numFragments, sequence) -> None:
+    def __init__(self, id: int, node_id: int, startSlot: int, ocw: int, grid: int,
+                 payload_size: int, numFragments: int, sequence: list[int]) -> None:
         self.id = id
         self.node_id = node_id
         self.startSlot = startSlot

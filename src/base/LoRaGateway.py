@@ -1,43 +1,43 @@
-import numpy as np
 from src.base.Event import *
 from src.base.Processor import Processor
-from src.base.LoRaTransmission import LoRaTransmission
 
 class LoRaGateway():
+
     """
-    A class that representes a LoRa Gateway with decoders
+    A class for decoding LoRa transmissions.
 
     Args:
-        numDecoders (int): The number of decoders on the gateway
-        decodeCapacity (int): The number of simultaneous demodulations per decoder
+        granularity (int): The granularity of the decoding process, in seconds.
+        CR (int): The coding rate of the LoRa transmissions.
+        numDecoders (int): The number of decoders in the gateway.
+        decodeCapacity (int): The decoding capacity of each decoder.
+
+    Attributes:
+        _processors (list[Processor]): A list of processors that handle decoding of LoRa transmissions.
 
     Methods:
-        init_processors(int, int): initialize processor
-        restart(): reinitialize processors
-        available_processor(): return next available processor
-        get_decoded_transmissions(): Return total successfully decoded transmissions
-        run(list[AbstractEvent]): Execute all given events
-        
+        restart(): Reset all processors to initial state.
+        available_processor(): Return the first available processor or None if no processor is available.
+        get_collided_packets(): Return total collided packets.
+        get_decoded_packets(): Return total successfully decoded packets.
+        get_decoded_bytes(): Return total successfully decoded bytes.
+        run(list[AbstractEvent]): Execute all given events.
     """
 
-
-    def __init__(self, granularity, simTime, threshold, numDecoders, decodeCapacity) -> None:
-        self.granularity = granularity
-        self.simTime = simTime
-        self.threshold = threshold
-        self._processors = self.init_processors(numDecoders, decodeCapacity)
+    def __init__(self, granularity: int, CR: int, numDecoders: int, decodeCapacity: int) -> None:
+        self._processors = self.init_processors(granularity, CR, numDecoders, decodeCapacity)
 
 
-    def init_processors(self, numDecoders, decodeCapacity):
+    def init_processors(self, granularity: int, CR: int, numDecoders: int, decodeCapacity: int) -> list[Processor]:
         """
         Instanciate processors
         """
         numProcessors = numDecoders * decodeCapacity
-        processors = [Processor(self.threshold, self.granularity) for _ in range(numProcessors)]
+        processors = [Processor(granularity, CR) for _ in range(numProcessors)]
         return processors
     
 
-    def restart(self):
+    def restart(self) -> None:
         """
         Reset all processor to initial state
         """
@@ -46,7 +46,7 @@ class LoRaGateway():
             processor.reset()
 
 
-    def available_processor(self):
+    def available_processor(self) -> Processor | None:
         """
         Return the first availabe processor or None if no processor is available
         """
@@ -59,7 +59,7 @@ class LoRaGateway():
         return None
     
 
-    def get_collided_packets(self):
+    def get_collided_packets(self) -> int:
         """
         Return total collided packets
         """
@@ -72,7 +72,7 @@ class LoRaGateway():
         return collided_packets
     
 
-    def get_decoded_packets(self):
+    def get_decoded_packets(self) -> int:
         """
         Return total successfully decoded packets
         """
@@ -85,7 +85,7 @@ class LoRaGateway():
         return decoded_packets
     
 
-    def get_decoded_bytes(self):
+    def get_decoded_bytes(self) -> int:
         """
         Return total successfully decoded bytes
         """
@@ -98,12 +98,11 @@ class LoRaGateway():
         return decoded_bytes
     
 
-    def run(self, events):
+    def run(self, events: list[AbstractEvent]) -> None:
         """
         Execute all given events
         """
 
-        event : AbstractEvent
         for event in events:
         
             if event._name == 'start':

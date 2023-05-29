@@ -4,17 +4,11 @@ import seaborn as sns
 import galois
 import matplotlib.pyplot as plt
 from src.families.LiFanMethod import LiFanFamily
-from src.families.LempelGreenbergMethod import LempelGreenbergFamily
 from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
 from src.base.LoRaNetwork import LoRaNetwork
 
 
 def get_family():
-
-    polys = galois.primitive_polys(2, 5)
-    poly1 = next(polys)
-    lempelGreenbergGenerator = LempelGreenbergFamily(p=2, n=5, k=5, poly=poly1)
-    lempelGreenberg_fam = lempelGreenbergGenerator.get_family()*8
 
     liFanGenerator = LiFanFamily(q=31, maxfreq=280, mingap=8)
     lifan_family = liFanGenerator.get_family(281, 8, '2l')
@@ -22,21 +16,21 @@ def get_family():
     lr_fhssGenerator = LR_FHSS_DriverFamily(q=31)
     driver_family = lr_fhssGenerator.get_family()*8
 
-    return driver_family
+    return lifan_family
 
 
 def get_avg_decoding_rate(v):
-    runs = 30
-    simTime = 531
+    runs = 20
+    simTime = 25000
     numOCW = 7
     numOBW = 280
     numGrids = 8
     max_seq_length = 31
-    granularity = 4
-    numDecoders = 1
-    decodeCapacity = 16
-    CR = 2
-    useGrid = True
+    granularity = 8
+    numDecoders = 8
+    decodeCapacity = 8
+    CR = 1
+    useGrid = False
     family = get_family()
 
     numNodes = int(v)
@@ -44,27 +38,32 @@ def get_avg_decoding_rate(v):
     network = LoRaNetwork(numNodes, family, useGrid, numOCW, numOBW, numGrids,
                           CR, granularity, max_seq_length, simTime, numDecoders, decodeCapacity)
 
-    avg_decode_rate = 0
+    avg_decoded_bytes = 0
+    avg_decoded_packets = 0
+    avg_collided_packets = 0
     for r in range(runs):
+
         network.run()
-        avg_decode_rate += network.get_decoded_transmissions()
+        avg_decoded_bytes += network.get_decoded_bytes()
+        avg_decoded_packets += network.get_decoded_packets()
+        avg_collided_packets += network.get_collided_packets()
         network.restart()
 
-    return avg_decode_rate / numNodes / runs
+    return [avg_decoded_bytes / runs, avg_decoded_packets / runs, avg_collided_packets/ runs]
 
 
 if __name__ == "__main__":
 
-    netSizesCR1 = np.logspace(1.0, 4.0, num=50)    
+    print('lifan_family\tCR = 1\tprocessors = 64')
 
-    netSizes = netSizesCR1
+    netSizes = np.logspace(2.0, 5.0, num=30)  #np.logspace(1.0, 4.0, num=50)
 
-    print('CR = 2; driver_family')
-
-    pool = Pool(processes = len(netSizes))
+    pool = Pool(processes = 15)
     result = pool.map(get_avg_decoding_rate, netSizes)
     pool.close()
     pool.join()
 
-    result2 = [round(i,6) for i in result]
-    print('\n', result2)
+    print('avg_decoded_bytes\n', [round(i[0],6) for i in result])
+    print('avg_decoded_packets\n', [round(i[1],6) for i in result])
+    print('avg_collided_packets\n', [round(i[2],6) for i in result])
+

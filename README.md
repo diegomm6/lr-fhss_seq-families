@@ -1,11 +1,11 @@
 
 ```src.base``` contains common functions and classes
 
-```src.families.py``` contains sequence families modules
+```src.families``` contains sequence families modules
 
-```src.simulation.py``` defines the simulator module for per slot collisions
+```src.models.simulation.py``` defines the simulator module for per slot collisions
 
-```src.simulationCR.py``` defines the simulator module for per packet collisions, considering the coding rate CR
+```src.models.simulationCR.py``` defines the simulator module for per packet collisions, considering the coding rate CR
 
 ```*.csv``` collision rate data files
 
@@ -18,3 +18,8 @@
 ```testNetsizeCR.py``` variation the previous file for per packet collision
 
 ```test.ipynb``` is for developing and testing methods, messy file
+
+
+# New model implemented
+
+- Support processors limiting the number of parallel decoding at the dateway 
