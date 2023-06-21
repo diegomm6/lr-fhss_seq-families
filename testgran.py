@@ -22,7 +22,7 @@ def get_family():
     lr_fhssGenerator = LR_FHSS_DriverFamily(q=31)
     driver_family = lr_fhssGenerator.get_family()*8
 
-    return driver_family
+    return lifan_family
 
 
 # test a single method for several number of nodes
@@ -33,11 +33,11 @@ def get_avg_packet_collision_rate(v):
     numOBW = 280
     numGrids = 8
     seq_length = 31
-    startLimit = 500
+    startLimit = 93
     granularity = 8
-    CR = 2
+    CR = 1
 
-    useGrid = True
+    useGrid = False
     family = get_family()
 
     nodes = int(v)
@@ -61,9 +61,9 @@ if __name__ == "__main__":
                    1.8e4, 2e4, 2.33e4, 2.66e4, 3e4, 3.5e4, 4e4, 4.5e4, 5e4, 6e4, 1e5]
     
 
-    netSizes = [1e4]
+    netSizes = np.logspace(2.0, 4.3, num=50)
 
-    print('CR = 2; driver_family')
+    print('CR = 1; lifan_family')
 
     pool = Pool(processes = len(netSizes))
     result = pool.map(get_avg_packet_collision_rate, netSizes)
