@@ -130,4 +130,11 @@ class Processor():
         if self._current_tx.ocw == ocw and current_obw == obw:
             self._current_collided_fragments += 1
 
+        # if collided fragments surpass the threshold
+        # then discard the packet and free the processor
+        thershold = self.get_thershold(self._current_tx.numFragments)
+        if self._current_collided_fragments > thershold:
+            self.collided_packets += 1
+            self._current_tx = None
+            self.is_busy = False
     

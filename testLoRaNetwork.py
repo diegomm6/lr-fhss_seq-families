@@ -14,19 +14,11 @@ def get_family():
     lempelGreenbergGenerator = LempelGreenbergFamily(p=2, n=5, k=5, poly=poly1)
     lempelGreenberg_fam = lempelGreenbergGenerator.get_family()*8
 
-
     lr_fhssGenerator = LR_FHSS_DriverFamily(q=31)
     driver_family = lr_fhssGenerator.get_family()*8
 
-
     liFanGenerator = LiFanFamily(q=31, maxfreq=280, mingap=8)
     lifan_family = liFanGenerator.get_family(281, 8, '2l')
-
-    liFan_fam1 = liFanGenerator.get_family(277, 8, '2l')
-    liFan_fam2 = liFanGenerator.get_family(281, 8, '2l')
-    liFan_fam3 = liFanGenerator.get_family(283, 8, '2l')
-    liFan_fam4 = liFanGenerator.get_family(287, 8, '2l')
-    liFan_fam5 = np.concatenate((liFan_fam1, liFan_fam2, liFan_fam3, liFan_fam4))
 
     return lifan_family
 
@@ -40,8 +32,8 @@ def get_avg_decoding_rate(v):
     max_seq_length = 31
     granularity = 8
     numDecoders = 1
-    decodeCapacity = 4096
-    CR = 1
+    decodeCapacity = 64
+    CR = 2
     useGrid = False
     family = get_family()
 
@@ -69,7 +61,7 @@ def get_avg_decoding_rate(v):
 
 if __name__ == "__main__":
 
-    print('lifan_family\tCR = 1\tprocessors = 4096')
+    print('lifan_family\tCR = 2\tprocessors = 64')
 
     netSizes = np.logspace(1.0, 4.0, num=50)
 
