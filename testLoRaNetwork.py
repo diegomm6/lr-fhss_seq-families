@@ -31,16 +31,16 @@ def get_avg_decoding_rate(v):
     numGrids = 8
     max_seq_length = 31
     granularity = 8
-    numDecoders = 1
-    decodeCapacity = 64
+    numDecoders = 64
     CR = 2
     useGrid = False
+    use_earlydecode = True
     family = get_family()
 
     numNodes = int(v)
 
     network = LoRaNetwork(numNodes, family, useGrid, numOCW, numOBW, numGrids,
-                          CR, granularity, max_seq_length, simTime, numDecoders, decodeCapacity)
+                          CR, granularity, max_seq_length, simTime, numDecoders, use_earlydecode)
 
     avg_decoded_bytes = 0
     avg_decoded_packets = 0

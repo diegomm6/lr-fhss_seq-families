@@ -7,13 +7,14 @@ from src.base.LoRaTransmission import LoRaTransmission
 class LoRaNetwork():
 
     def __init__(self, numNodes, family, useGrid, numOCW, numOBW, numGrids, CR,
-                 granularity, max_seq_length, simTime, numDecoders, decodeCapacity) -> None:
+                 granularity, max_seq_length, simTime, numDecoders, use_earlydecode) -> None:
         
         self.family = family
         self.numOCW = numOCW
         self.numOBW = numOBW
         self.granularity = granularity
         self.simTime = simTime
+        self.use_earlydecode = use_earlydecode
 
         assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
 
@@ -22,7 +23,7 @@ class LoRaNetwork():
                       for i in range(numNodes)]
 
         # add support for multiple gateways in the future
-        self.gateway = LoRaGateway(granularity, CR, numDecoders, decodeCapacity)
+        self.gateway = LoRaGateway(granularity, CR, numDecoders)
 
 
     def get_transmissions(self) -> list[LoRaTransmission]:
@@ -59,6 +60,9 @@ class LoRaNetwork():
         end_events = self.get_end_events(transmissions)
 
         events = start_events + collision_events + end_events
+
+        if self.use_earlydecode:
+            events += self.get_earlydecode_events()
 
         sorted_events = sorted(events)
         #for ev in sorted_events: print(ev)
@@ -100,6 +104,18 @@ class LoRaNetwork():
                 collision_events.append(new_collision_event)
 
         return collision_events
+    
+
+    def get_earlydecode_events(self, period=1) -> list[EarlyDecodeEvent]:
+
+        earlydecode_events = []
+        t = period
+        while t < self.simTime:
+            new_earlydecode_event = EarlyDecodeEvent(t, 'early_decode')
+            earlydecode_events.append(new_earlydecode_event)
+            t += period
+
+        return earlydecode_events
 
 
     def run(self) -> None:

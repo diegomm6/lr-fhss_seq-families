@@ -45,3 +45,10 @@ class EndEvent(AbstractEvent):
     def __str__(self) -> str:
         return f"ends transmission {self._transmission.id} at time {self._time}"
     
+
+class EarlyDecodeEvent(AbstractEvent):
+    def __init__(self, time, name) -> None:
+        super().__init__(time, name)
+    
+    def __str__(self) -> str:
+        return f"early decode signal at time {self._time}"

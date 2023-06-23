@@ -10,7 +10,6 @@ class LoRaGateway():
         granularity (int): The granularity of the decoding process, in seconds.
         CR (int): The coding rate of the LoRa transmissions.
         numDecoders (int): The number of decoders in the gateway.
-        decodeCapacity (int): The decoding capacity of each decoder.
 
     Attributes:
         _processors (list[Processor]): A list of processors that handle decoding of LoRa transmissions.
@@ -24,17 +23,8 @@ class LoRaGateway():
         run(list[AbstractEvent]): Execute all given events.
     """
 
-    def __init__(self, granularity: int, CR: int, numDecoders: int, decodeCapacity: int) -> None:
-        self._processors = self.init_processors(granularity, CR, numDecoders, decodeCapacity)
-
-
-    def init_processors(self, granularity: int, CR: int, numDecoders: int, decodeCapacity: int) -> list[Processor]:
-        """
-        Instanciate processors
-        """
-        numProcessors = numDecoders * decodeCapacity
-        processors = [Processor(granularity, CR) for _ in range(numProcessors)]
-        return processors
+    def __init__(self, granularity: int, CR: int, numDecoders: int) -> None:
+        self._processors = [Processor(granularity, CR) for _ in range(numDecoders)]
     
 
     def restart(self) -> None:
@@ -117,6 +107,10 @@ class LoRaGateway():
             elif event._name == 'end':
                 for processor in self._processors:
                     processor.finish_decoding(event)
+
+            elif event._name == 'early_decode':
+                for processor in self._processors:
+                    processor.early_decode(event)
 
             else:
                 raise Exception(f"Invalid event name {event._name}") 

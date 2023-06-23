@@ -138,3 +138,22 @@ class Processor():
             self._current_tx = None
             self.is_busy = False
     
+
+    def early_decode(self, earlydecode_event : EarlyDecodeEvent)-> None:
+
+        if not self.is_busy:
+            return
+        
+        # if collided fragments surpass the threshold
+        # then discard the packet and free the processor
+        thershold = self.get_thershold(self._current_tx.numFragments)
+        minFragments = self._current_tx.numFragments - thershold
+
+        rcvdFragments = earlydecode_event._time - self._current_tx.startSlot + 1
+        validFragments = rcvdFragments - self._current_collided_fragments
+
+        if validFragments >= minFragments:
+            self.decoded_packets += 1
+            self.decoded_bytes += self._current_tx.payload_size
+            self._current_tx = None
+            self.is_busy = False
