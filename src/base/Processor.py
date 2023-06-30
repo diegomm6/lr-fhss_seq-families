@@ -64,7 +64,7 @@ class Processor():
 
     def get_thershold(self, seq_length : int) -> int:
         """
-        Determine the minimum number of fragments needed to successfully
+        Determine limit of collided fragments to successfully
         decode a packet. Two Coding Rates supported:
             if CR==1 then a 1/3 of fragmenst are required
             if CR==2 then a 2/3 of fragmenst are required
@@ -124,7 +124,7 @@ class Processor():
         obw = collision_event._obw
 
         current_obw_id = (t - self._current_tx.startSlot) // self.granularity
-        current_obw = self._current_tx.sequence[current_obw_id]
+        current_obw = self._current_tx.sequence[current_obw_id] + self._current_tx.grid
 
         # is current_tx is involved in collision, fragment is collided
         if self._current_tx.ocw == ocw and current_obw == obw:

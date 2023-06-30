@@ -61,14 +61,14 @@ class SimulationCRgranularity():
                 collided_fragments = 0
                 for t, obw in enumerate(node.seq):
                     
-                    collided = False
+                    isCollided = False
                     slot = node.gran + self.granularity * (node.startTime + t)
                     for g in range(self.granularity):
                         
                         if txData[node.ocw][obw + node.grid][slot + g] != 1:
-                            collided = True
+                            isCollided = True
 
-                    if collided:
+                    if isCollided:
                         collided_fragments += 1
                     
                 if collided_fragments > self.threshold:
