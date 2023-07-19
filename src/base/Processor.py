@@ -80,7 +80,7 @@ class Processor():
 
         self.is_busy = True
         self._current_tx = start_event._transmission
-        self._fragment_status = np.zeros(start_event._transmission.numFragments)
+        self._fragment_status = np.zeros(int(start_event._transmission.numFragments))
         
 
     def finish_decoding(self, end_event : EndEvent) -> None:

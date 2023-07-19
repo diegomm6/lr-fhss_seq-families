@@ -74,7 +74,7 @@ class SimulationCRgranularity():
                 if collided_fragments > self.threshold:
                     collided_packets += 1
 
-            avg_collided_rate += collided_packets / len(self.population.nodes)
+            avg_collided_rate += collided_packets
             self.population.restart()
         
         return avg_collided_rate / runs

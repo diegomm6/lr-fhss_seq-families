@@ -15,7 +15,10 @@ if __name__ == "__main__":
 
         lr_fhssGenerator = LR_FHSS_DriverFamily(q)
         driver_family = lr_fhssGenerator.get_family()*8
-        driver_HCdata.append(avg_maxHC(driver_family))
+        for i in range(len(driver_family)):
+            driver_family[i] = driver_family[i] + np.random.randint(8)
+
+        driver_HCdata.append(avg_crossHC(driver_family)) # avg_maxHC
 
         liFanGenerator = LiFanFamily(q, maxfreq=280, mingap=8)
         lifan_family = liFanGenerator.get_family(281, 8, '2l')

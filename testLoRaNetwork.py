@@ -34,7 +34,7 @@ def get_avg_decoding_rate(v):
     numDecoders = 64
     CR = 2
     useGrid = False
-    use_earlydecode = True
+    use_earlydecode = False
     family = get_family()
 
     numNodes = int(v)

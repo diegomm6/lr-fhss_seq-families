@@ -35,7 +35,7 @@ def get_avg_packet_collision_rate(v):
     seq_length = 31
     startLimit = 93
     granularity = 8
-    CR = 2
+    CR = 1
 
     useGrid = False
     family = get_family()
@@ -47,7 +47,7 @@ def get_avg_packet_collision_rate(v):
     
     colrate = simulation.get_packet_collision_rate(runs)
 
-    #print(f"finished for n={nodes}")
+    print(f"finished for n={nodes}")
 
     return colrate
 
@@ -61,7 +61,9 @@ if __name__ == "__main__":
                    1.8e4, 2e4, 2.33e4, 2.66e4, 3e4, 3.5e4, 4e4, 4.5e4, 5e4, 6e4, 1e5]
     
 
-    netSizes = np.logspace(1.0, 4.0, num=50)
+    #netSizes = np.logspace(1.0, 4.0, num=50)
+
+    netSizes = [11578, 13405, 15520, 17969, 20805, 24088, 27890, 32291, 37387, 43287, 50118]
 
     print('CR = 1; lifan_family')
 
