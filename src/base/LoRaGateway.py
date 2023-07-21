@@ -23,8 +23,8 @@ class LoRaGateway():
         run(list[AbstractEvent]): Execute all given events.
     """
 
-    def __init__(self, granularity: int, CR: int, numDecoders: int) -> None:
-        self._processors = [Processor(granularity, CR) for _ in range(numDecoders)]
+    def __init__(self, granularity: int, CR: int, use_earlydrop: bool, numDecoders: int) -> None:
+        self._processors = [Processor(granularity, CR, use_earlydrop) for _ in range(numDecoders)]
     
 
     def restart(self) -> None:
@@ -49,22 +49,23 @@ class LoRaGateway():
         return None
     
 
-    def get_collided_packets(self) -> int:
+    def get_collided_payloads(self) -> int:
         """
-        Return total collided packets
+        Return total collided payloads
         """
 
-        collided_packets = 0
+        collided_payloads = 0
         processor : Processor
         for processor in self._processors:
-            collided_packets += processor.collided_packets
+            collided_payloads += processor.collided_payloads
 
-        return collided_packets
+        return collided_payloads
     
 
     def get_decoded_packets(self) -> int:
         """
-        Return total successfully decoded packets
+        Return total successfully decoded packets,
+        successful payload reception and at least one header
         """
 
         decoded_packets = 0
@@ -75,9 +76,24 @@ class LoRaGateway():
         return decoded_packets
     
 
+    def get_decoded_payloads(self) -> int:
+        """
+        Return total successfully decoded payloads,
+        regardless of header successful reception
+        """
+
+        decoded_payloads = 0
+        processor : Processor
+        for processor in self._processors:
+            decoded_payloads += processor.decoded_payloads
+
+        return decoded_payloads
+    
+
     def get_decoded_bytes(self) -> int:
         """
-        Return total successfully decoded bytes
+        Return total successfully decoded bytes,
+        considering only payload data
         """
 
         decoded_bytes = 0
@@ -113,4 +129,4 @@ class LoRaGateway():
                     processor.early_decode(event)
 
             else:
-                raise Exception(f"Invalid event name {event._name}") 
+                raise Exception(f"Invalid event name '{event._name}'") 

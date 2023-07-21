@@ -5,7 +5,7 @@ class FHSfamily(ABC):
     def __init__(self, q) -> None:
         super().__init__()
         self.q = q
-    
+
     @abstractmethod
-    def get_family():
+    def get_random_sequence():
         pass

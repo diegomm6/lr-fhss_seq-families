@@ -79,6 +79,7 @@ class LempelGreenbergFamily(FHSfamily):
         self.k = k
         q = self.p**self.n - 1
         super().__init__(q)
+        self.FHSfam = []
         self.lfsr = GLFSR(poly.reverse())
 
     # return current lfsr state
@@ -89,6 +90,11 @@ class LempelGreenbergFamily(FHSfamily):
     def get_msequence(self):
         return self.lfsr.step(self.q)
 
-    def get_family(self):
+    def set_family(self, numGrids):
         msequence = np.array(self.get_msequence())
-        return optimal_family(msequence, self.p, self.k)
+        self.FHSfam = (optimal_family(msequence, self.p, self.k) * numGrids) + np.random.randint(numGrids)
+
+    def get_random_sequence(self):
+        seq_id = np.random.randint(len(self.FHSfam))
+        return self.FHSfam[seq_id]
+    

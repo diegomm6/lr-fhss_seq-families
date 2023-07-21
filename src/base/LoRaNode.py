@@ -1,5 +1,6 @@
 import numpy as np
 from src.base.LoRaTransmission import LoRaTransmission
+from src.families.LR_FHSS_DriverMethod import FHSfamily
 
 class LoRaNode():
     """
@@ -30,12 +31,10 @@ class LoRaNode():
         get_transmissions(family): Get all transmissions during simulation time for this node.
 
     """
-    def __init__(self, id, CR, numOCW, useGrid, numGrids, startLimit) -> None:
+    def __init__(self, id, CR, numOCW, startLimit) -> None:
         self.id = id
         self.CR = CR
         self.numOCW = numOCW
-        self.useGrid = useGrid
-        self.numGrids = numGrids
         self.startLimit = startLimit
         self.sent_packets = 0
         self.sent_payload_bytes = 0
@@ -60,7 +59,7 @@ class LoRaNode():
         return nb_hops_out
     
 
-    def get_sequence(self, family):
+    def get_sequence(self, family: FHSfamily):
 
         # payload size is set to 58 bytes when CR1 is used
         # and 121 bytes for CR2, this ensures 31 fragments
@@ -70,8 +69,7 @@ class LoRaNode():
 
         numFragments = self.numHops(payload_size)
 
-        seq_id = np.random.randint(len(family))
-        sequence = family[seq_id]
+        sequence = family.get_random_sequence()
 
         seq_start_id = np.random.randint(len(sequence))
         seq_end_id = (seq_start_id + numFragments) % len(sequence)
@@ -85,7 +83,7 @@ class LoRaNode():
         return final_sequence
 
 
-    def get_transmissions(self, family) -> list[LoRaTransmission]:
+    def get_transmissions(self, family: FHSfamily) -> list[LoRaTransmission]:
         """
         Obtain all transmission during simulation time for this node.
         The current model only support one transmission per node,
@@ -93,28 +91,30 @@ class LoRaNode():
         """
 
         ocw = np.random.randint(self.numOCW)
-
-        grid = 0
-        if self.useGrid:
-            grid = np.random.randint(self.numGrids)
-
-        seq_id = np.random.randint(len(family))
-        sequence = family[seq_id]
-
         startTime = np.random.randint(self.startLimit)
 
-        # payload size is set to 58 bytes when CR1 is used
-        # and 121 bytes for CR2, this ensures 31 fragments
-        payload_size = 58
-        if self.CR == 2:
+        if self.CR == 1:
+            payload_size = 58
+            header_replicas = 3
+
+        elif self.CR == 2:
             payload_size = 121
+            header_replicas = 2
+
+        else:
+            raise Exception(f"Invalid coding rate '{self.CR}'") 
+
+        numFragments = self.numHops(payload_size)
+        seq_length = int(numFragments + header_replicas)
+
+        sequence = family.get_random_sequence()
+        sequence = sequence[:seq_length]
 
         self.sent_packets += 1
         self.sent_payload_bytes += payload_size
 
-        numFragments = self.numHops(payload_size)
 
-        tx = LoRaTransmission(self.id, self.id, startTime, ocw, grid,
+        tx = LoRaTransmission(self.id, self.id, startTime, ocw, header_replicas,
                               payload_size, numFragments, sequence)
 
         return [tx]

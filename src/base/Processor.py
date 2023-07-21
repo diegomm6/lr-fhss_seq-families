@@ -38,15 +38,19 @@ class Processor():
             collision event and if so updates the counter of collided fragments
     """
 
-    def __init__(self, granularity: int, CR: int) -> None:
+    def __init__(self, granularity: int, CR: int, use_earlydrop: bool) -> None:
         self.CR = CR
         self.granularity = granularity
+        self.header_slots = int(self.granularity * 7 / 3)
+        self.use_earlydrop = use_earlydrop
         self._current_tx : LoRaTransmission = None
+        self._header_status = []
         self._fragment_status = []
         self.is_busy = False
-        self.collided_packets = 0
         self.decoded_packets = 0
         self.decoded_bytes = 0
+        self.decoded_payloads = 0
+        self.collided_payloads = 0
 
 
     def reset(self) -> None:
@@ -56,21 +60,33 @@ class Processor():
 
         self.is_busy = False
         self._current_tx = None
+        self._header_status = []
         self._fragment_status = []
-        self.collided_packets = 0
         self.decoded_packets = 0
         self.decoded_bytes = 0
+        self.decoded_payloads = 0
+        self.collided_payloads = 0
 
-
-    def get_thershold(self, seq_length : int) -> int:
+    
+    def clear_transmission(self) -> None:
         """
-        Determine limit of collided fragments to successfully
-        decode a packet. Two Coding Rates supported:
+        Reset processor to free state
+        """
+        self.is_busy = False
+        self._current_tx = None
+        self._header_status = []
+        self._fragment_status = []
+
+
+    def get_minfragments(self, seq_length : int) -> int:
+        """
+        Determine minimum required number of fragment for 
+        successful decoding. Two Coding Rates supported:
             if CR==1 then a 1/3 of fragmenst are required
             if CR==2 then a 2/3 of fragmenst are required
         """
 
-        return seq_length - np.ceil(self.CR * seq_length / 3)
+        return np.ceil(self.CR * seq_length / 3)
 
 
     def start_decoding(self, start_event : StartEvent) -> None:
@@ -80,6 +96,7 @@ class Processor():
 
         self.is_busy = True
         self._current_tx = start_event._transmission
+        self._header_status = np.zeros(int(start_event._transmission.header_replicas))
         self._fragment_status = np.zeros(int(start_event._transmission.numFragments))
         
 
@@ -95,20 +112,22 @@ class Processor():
 
         if self._current_tx.id == end_event._transmission.id:
 
-            thershold = self.get_thershold(end_event._transmission.numFragments)
+            thershold = self._current_tx.numFragments - self.get_minfragments(self._current_tx.numFragments)
             collided_fragments = (self._fragment_status == 1).sum()
             
             if collided_fragments <= thershold:
-                self.decoded_packets += 1
+
+                if (self._header_status == 1).sum() < self._current_tx.header_replicas:
+                    self.decoded_packets += 1
+
+                self.decoded_payloads += 1
                 self.decoded_bytes += self._current_tx.payload_size
 
             else:
-                self.collided_packets += 1
+                self.collided_payloads += 1
 
-            self.is_busy = False
-            self._current_tx = None
-            self._fragment_status = []
-    
+            self.clear_transmission()
+
 
     def handle_collision(self, collision_event : CollisionEvent) -> None:
         """
@@ -116,8 +135,6 @@ class Processor():
         collision event and if so updates the counter of collided fragments
         """
 
-        # if process is not receiving a signal return
-        # else, current_tx is not none
         if not self.is_busy:
             return
 
@@ -125,23 +142,32 @@ class Processor():
         ocw = collision_event._ocw
         obw = collision_event._obw
 
-        current_fragment_id = (t - self._current_tx.startSlot) // self.granularity
-        current_obw = self._current_tx.sequence[current_fragment_id] + self._current_tx.grid
+        header_total_slots = self._current_tx.header_replicas * self.header_slots
 
-        # is current_tx is involved in collision, fragment is collided
-        if self._current_tx.ocw == ocw and current_obw == obw:
-            self._fragment_status[current_fragment_id] = 1
+        # header collision
+        if (t - self._current_tx.startSlot) < header_total_slots:
+            current_header_id = (t - self._current_tx.startSlot) // self.header_slots
+            current_obw = self._current_tx.sequence[current_header_id]
 
-        # if collided fragments surpass the threshold
-        # then discard the packet and free the processor
-        thershold = self.get_thershold(self._current_tx.numFragments)
-        collided_fragments = (self._fragment_status == 1).sum()
-        if collided_fragments > thershold:
-            self.collided_packets += 1
-            self.is_busy = False
-            self._current_tx = None
-            self._fragment_status = []
-    
+            if self._current_tx.ocw == ocw and current_obw == obw:
+                self._header_status[current_header_id] = 1
+
+        # fragment collision
+        else:
+            current_fragment_id = (t - self._current_tx.startSlot - header_total_slots) // self.granularity
+            current_obw = self._current_tx.sequence[current_fragment_id + self._current_tx.header_replicas]
+
+            if self._current_tx.ocw == ocw and current_obw == obw:
+                self._fragment_status[current_fragment_id] = 1
+
+        # early drop
+        if self.use_earlydrop:
+            thershold = self._current_tx.numFragments - self.get_minfragments(self._current_tx.numFragments)
+            collided_fragments = (self._fragment_status == 1).sum()
+            if collided_fragments > thershold:
+                self.collided_payloads += 1
+                self.clear_transmission()
+
 
     def early_decode(self, earlydecode_event : EarlyDecodeEvent)-> None:
 
@@ -150,15 +176,18 @@ class Processor():
         
         # if collided fragments surpass the threshold
         # then discard the packet and free the processor
-        thershold = self.get_thershold(self._current_tx.numFragments)
-        minFragments = self._current_tx.numFragments - thershold
+        header_total_slots = self._current_tx.header_replicas * self.header_slots
+        current_fragment_id = (earlydecode_event._time - self._current_tx.startSlot - 
+                               header_total_slots) // self.granularity
 
-        current_fragment_id = (earlydecode_event._time - self._current_tx.startSlot) // self.granularity
         validFragments = (self._fragment_status[:current_fragment_id+1] == 0).sum()
 
-        if validFragments >= minFragments:
-            self.decoded_packets += 1
+        if validFragments >= self.get_minfragments(self._current_tx.numFragments):
+
+            if (self._header_status == 1).sum() < self._current_tx.header_replicas:
+                self.decoded_packets += 1
+
+            self.decoded_payloads += 1
             self.decoded_bytes += self._current_tx.payload_size
-            self.is_busy = False
-            self._current_tx = None
-            self._fragment_status = []
+
+            self.clear_transmission()

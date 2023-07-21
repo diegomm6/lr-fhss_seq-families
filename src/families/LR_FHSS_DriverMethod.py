@@ -52,10 +52,16 @@ class LR_FHSS_DriverFamily(FHSfamily):
     def __init__(self, q) -> None:
         super().__init__(q)
         self.m = 384
+        self.FHSfam = []
 
-    def get_family(self):
+    def set_family(self, numGrids):
         fam = []
         for id in range(self.m):
             fam.append(get_lr_fhss_seq(id, self.q))
 
-        return np.array(fam)
+        self.FHSfam = (np.array(fam) * numGrids) + np.random.randint(numGrids)
+
+    def get_random_sequence(self):
+        seq_id = np.random.randint(len(self.FHSfam))
+        return self.FHSfam[seq_id]
+    

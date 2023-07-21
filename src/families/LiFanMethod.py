@@ -54,6 +54,7 @@ class LiFanFamily(FHSfamily):
         super().__init__(q)
         self.mingap = mingap
         self.maxfreq = maxfreq
+        self.FHSfam = []
 
 
     def get_2l_family(self, l, d):
@@ -84,11 +85,15 @@ class LiFanFamily(FHSfamily):
         return split_seq(seq_3l, self.q)
 
 
-    def get_family(self, l, d, method):
+    def set_family(self, l, d, method):
         if method=='2l':
-            return self.get_2l_family(l, d)
+            self.FHSfam = self.get_2l_family(l, d)
         elif method=='3l':
-            return self.get_3l_family(l, d)
+            self.FHSfam = self.get_3l_family(l, d)
         else:
             raise Exception(f"Error: wrong method '{method}' given")
+        
 
+    def get_random_sequence(self):
+        seq_id = np.random.randint(len(self.FHSfam))
+        return self.FHSfam[seq_id]
