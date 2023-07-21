@@ -169,18 +169,23 @@ class Processor():
                 self.clear_transmission()
 
 
+    # if collided fragments surpass the threshold
+    # then discard the packet and free the processor
     def early_decode(self, earlydecode_event : EarlyDecodeEvent)-> None:
 
         if not self.is_busy:
             return
         
-        # if collided fragments surpass the threshold
-        # then discard the packet and free the processor
         header_total_slots = self._current_tx.header_replicas * self.header_slots
-        current_fragment_id = (earlydecode_event._time - self._current_tx.startSlot - 
+
+        # if still receiving the header repetitions, skip early decode
+        if (earlydecode_event._time - self._current_tx.startSlot) < header_total_slots:
+            return
+
+        current_fragment_id = (earlydecode_event._time - self._current_tx.startSlot - \
                                header_total_slots) // self.granularity
 
-        validFragments = (self._fragment_status[:current_fragment_id+1] == 0).sum()
+        validFragments = (self._fragment_status[:(current_fragment_id+1)] == 0).sum()
 
         if validFragments >= self.get_minfragments(self._current_tx.numFragments):
 
@@ -191,3 +196,5 @@ class Processor():
             self.decoded_bytes += self._current_tx.payload_size
 
             self.clear_transmission()
+
+        
