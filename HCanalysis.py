@@ -9,21 +9,19 @@ if __name__ == "__main__":
 
     lifan_HCdata = []
     driver_HCdata = []
-    seq_lengths = [q for q in range(2,35)]
+    seq_lengths = [q for q in range(2,36)]
 
     for q in seq_lengths:
 
         lr_fhssGenerator = LR_FHSS_DriverFamily(q)
-        driver_family = lr_fhssGenerator.get_family()*8
-        for i in range(len(driver_family)):
-            driver_family[i] = driver_family[i] + np.random.randint(8)
+        lr_fhssGenerator.set_family(8)
 
-        driver_HCdata.append(avg_crossHC(driver_family)) # avg_maxHC
+        driver_HCdata.append(avg_maxHC(lr_fhssGenerator.FHSfam))   # avg_crossHC
 
-        liFanGenerator = LiFanFamily(q, maxfreq=280, mingap=8)
-        lifan_family = liFanGenerator.get_family(281, 8, '2l')
-        #print(f'q = {q}; famsize = {len(lifan_family)}')
-        lifan_HCdata.append(avg_maxHC(lifan_family))
+        liFanFHSfam = LiFanFamily(q, maxfreq=280, mingap=8)
+        liFanFHSfam.set_family(281, 8, '2l')
+
+        lifan_HCdata.append(avg_maxHC(liFanFHSfam.FHSfam))
 
     
     plt.figure(figsize=(8,8))

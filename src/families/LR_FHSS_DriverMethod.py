@@ -38,7 +38,7 @@ def get_lr_fhss_seq(id, q):
         lfsr_state, hop = lr_fhss_get_next_state(lfsr_state, polynomial, xoring_seed, n_grid)
         fhs.append(hop)
 
-    return fhs
+    return np.array(fhs)
 
 
 """
@@ -57,9 +57,10 @@ class LR_FHSS_DriverFamily(FHSfamily):
     def set_family(self, numGrids):
         fam = []
         for id in range(self.m):
-            fam.append(get_lr_fhss_seq(id, self.q))
+            fhs = (get_lr_fhss_seq(id, self.q) * numGrids) + np.random.randint(numGrids)
+            fam.append(fhs)
 
-        self.FHSfam = (np.array(fam) * numGrids) + np.random.randint(numGrids)
+        self.FHSfam = fam
 
     def get_random_sequence(self):
         seq_id = np.random.randint(len(self.FHSfam))
