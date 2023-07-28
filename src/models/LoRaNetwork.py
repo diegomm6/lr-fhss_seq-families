@@ -51,8 +51,7 @@ class LoRaNetwork():
             return lempelGreenbergFHSfam
 
         elif familyname == "driver":
-            driverFHSfam = LR_FHSS_DriverFamily(q=34)
-            driverFHSfam.set_family(numGrids)
+            driverFHSfam = LR_FHSS_DriverFamily(q=34, regionDR="EU137")
             return driverFHSfam
 
         elif familyname == "lifan":

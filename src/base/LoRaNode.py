@@ -57,30 +57,6 @@ class LoRaNode():
         nb_hops_out = ( length_bits + 47 ) // 48
 
         return nb_hops_out
-    
-
-    def get_sequence(self, family: FHSfamily):
-
-        # payload size is set to 58 bytes when CR1 is used
-        # and 121 bytes for CR2, this ensures 31 fragments
-        payload_size = np.random.randint(10, 58+1)
-        if self.CR == 2:
-            payload_size = np.random.randint(10, 121+1)
-
-        numFragments = self.numHops(payload_size)
-
-        sequence = family.get_random_sequence()
-
-        seq_start_id = np.random.randint(len(sequence))
-        seq_end_id = (seq_start_id + numFragments) % len(sequence)
-
-        if seq_start_id < seq_end_id:
-            final_sequence = sequence[seq_start_id:seq_end_id]
-
-        else:
-            final_sequence = sequence[seq_start_id:] + sequence[:seq_end_id]
-
-        return final_sequence
 
 
     def get_transmissions(self, family: FHSfamily) -> list[LoRaTransmission]:
@@ -91,7 +67,7 @@ class LoRaNode():
         """
 
         ocw = np.random.randint(self.numOCW)
-        startTime = np.random.randint(self.startLimit)
+        startSlot = np.random.randint(self.startLimit)
 
         if self.CR == 1:
             payload_size = 58
@@ -114,7 +90,7 @@ class LoRaNode():
         self.sent_payload_bytes += payload_size
 
 
-        tx = LoRaTransmission(self.id, self.id, startTime, ocw, header_replicas,
+        tx = LoRaTransmission(self.id, self.id, startSlot, ocw, header_replicas,
                               payload_size, numFragments, sequence)
 
         return [tx]

@@ -2,21 +2,21 @@ from multiprocessing import Pool
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from src.base.LoRaNetwork import LoRaNetwork
+from src.models.LoRaNetwork import LoRaNetwork
 
 
 def get_simdata(v):
 
     runs = 1
-    simTime = 1000
-    numOCW = 1
+    simTime = 912
+    numOCW = 7
     numOBW = 280
     numGrids = 8
     granularity = 6
     numDecoders = 100
     CR = 1
     use_earlydecode = True
-    use_earlydrop = False
+    use_earlydrop = True
     familyname = "lifan"
 
     numNodes = int(v)

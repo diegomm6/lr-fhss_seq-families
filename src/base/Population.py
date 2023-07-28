@@ -1,18 +1,53 @@
-from src.base.Node import Node
 import numpy as np
+import galois
+from src.families.LR_FHSS_DriverMethod import FHSfamily
+from src.families.LiFanMethod import LiFanFamily
+from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
+from src.families.LempelGreenbergMethod import LempelGreenbergFamily
+
+
+class Node():
+
+    def __init__(self, startSlot, ocw, sequence) -> None:
+        self.startSlot = startSlot
+        self.ocw = ocw
+        self.sequence = sequence
+    
 
 class Population():
 
-    def __init__(self, family, useGrid, numOCW, numGrids, n, startLimit, granularity) -> None:
-        self.family = family
-        self.useGrid = useGrid
+    def __init__(self, familyname, numGrids, numOCW, numNodes, startLimit,
+                 numFragments, header_replicas) -> None:
+        self.FHSfam: FHSfamily = self.set_FHSfamily(familyname, numGrids)
         self.numOCW = numOCW
-        self.numGrids = numGrids
-        self.n = n
+        self.numNodes = numNodes
         self.startLimit = startLimit
-        self.granularity = granularity
+        self.numFragments = numFragments
+        self.header_replicas = header_replicas
         self.nodes = self.init_nodes()
 
+
+    def set_FHSfamily(self, familyname, numGrids):
+
+        if familyname == "lemgreen":
+            polys = galois.primitive_polys(2, 5)
+            poly1 = next(polys)
+            lempelGreenbergFHSfam = LempelGreenbergFamily(p=2, n=5, k=5, poly=poly1)
+            lempelGreenbergFHSfam.set_family(numGrids)
+            return lempelGreenbergFHSfam
+
+        elif familyname == "driver":
+            driverFHSfam = LR_FHSS_DriverFamily(q=34, regionDR="EU137")
+            return driverFHSfam
+
+        elif familyname == "lifan":
+            liFanFHSfam = LiFanFamily(q=34, maxfreq=280, mingap=8)
+            liFanFHSfam.set_family(281, 8, '2l')
+            return liFanFHSfam
+
+        else:
+            raise Exception(f"Invalid family name '{familyname}'")
+        
 
     def restart(self):
 
@@ -20,39 +55,26 @@ class Population():
         for node in self.nodes:
 
             node.ocw = np.random.randint(self.numOCW)
-            node.startTime = np.random.randint(self.startLimit)
-            seq_id = np.random.randint(len(self.family))
-            node.seq = self.family[seq_id]
+            node.startSlot = np.random.randint(self.startLimit)
 
-            node.grid = 0
-            if self.useGrid:
-                node.grid = np.random.randint(self.numGrids)
-
-            node.gran = 0
-            if self.granularity:
-                node.gran = np.random.randint(self.granularity)
+            seq_length = int(self.numFragments + self.header_replicas)
+            sequence = self.FHSfam.get_random_sequence()
+            node.sequence = sequence[:seq_length]
         
 
     def init_nodes(self):
 
         nodes = []
-        for _ in range(self.n):
+        for _ in range(self.numNodes):
             
             ocw = np.random.randint(self.numOCW)
-            startTime = np.random.randint(self.startLimit)
-            seq_id = np.random.randint(len(self.family))
-            seq = self.family[seq_id]
+            startSlot = np.random.randint(self.startLimit)
 
-            grid = 0
-            if self.useGrid:
-                grid = np.random.randint(self.numGrids)
+            seq_length = int(self.numFragments + self.header_replicas)
+            sequence = self.FHSfam.get_random_sequence()
+            sequence = sequence[:seq_length]
 
-            gran = 0
-            if self.granularity:
-                gran = np.random.randint(self.granularity)
-
-
-            nodes.append(Node(seq, ocw, grid, startTime, gran))
+            nodes.append(Node(startSlot, ocw, sequence))
         
         return nodes
 
