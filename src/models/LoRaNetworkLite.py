@@ -103,6 +103,18 @@ class LoRaNetworkLite():
         return avg_channel_occupancy / runs
     
 
+    def total_collided_slots(self, runs : int):
+
+        avg_collided_slots = 0
+
+        for _ in range(runs):
+            txData = self.get_collision_matrix()
+            avg_collided_slots += (txData > 1).sum()
+            self.population.restart()
+
+        return avg_collided_slots / runs
+    
+
     def get_collision_matrix(self) -> np.ndarray:
 
         collision_matrix = np.zeros((self.numOCW, self.numOBW, self.simTime))

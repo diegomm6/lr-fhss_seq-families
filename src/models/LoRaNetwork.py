@@ -12,7 +12,7 @@ from src.families.LempelGreenbergMethod import LempelGreenbergFamily
 class LoRaNetwork():
 
     def __init__(self, numNodes, familyname, numOCW, numOBW, numGrids, CR, granularity,
-                 simTime, numDecoders, use_earlydecode, use_earlydrop) -> None:
+                 simTime, numDecoders, use_earlydecode, use_earlydrop, use_headerdrop) -> None:
         
         self.numOCW = numOCW
         self.numOBW = numOBW
@@ -28,7 +28,7 @@ class LoRaNetwork():
         self.nodes = [LoRaNode(i, CR, numOCW, startLimit) for i in range(numNodes)]
 
         # add support for multiple gateways in the future
-        self.gateway = LoRaGateway(granularity, CR, use_earlydrop, numDecoders)
+        self.gateway = LoRaGateway(granularity, CR, use_earlydrop, use_headerdrop, numDecoders)
 
 
     def get_transmissions(self) -> list[LoRaTransmission]:
@@ -166,6 +166,9 @@ class LoRaNetwork():
     
     def get_decoded_bytes(self) -> int:
         return self.gateway.get_decoded_bytes()
+    
+    def get_header_drop_packets(self) -> int:
+        return self.gateway.get_header_drop_packets()
     
 
     def get_sent_packets(self) -> int:

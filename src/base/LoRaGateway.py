@@ -23,8 +23,8 @@ class LoRaGateway():
         run(list[AbstractEvent]): Execute all given events.
     """
 
-    def __init__(self, granularity: int, CR: int, use_earlydrop: bool, numDecoders: int) -> None:
-        self._processors = [Processor(granularity, CR, use_earlydrop) for _ in range(numDecoders)]
+    def __init__(self, granularity: int, CR: int, use_earlydrop: bool, use_headerdrop: bool, numDecoders: int) -> None:
+        self._processors = [Processor(granularity, CR, use_earlydrop, use_headerdrop) for _ in range(numDecoders)]
     
 
     def restart(self) -> None:
@@ -102,6 +102,19 @@ class LoRaGateway():
             decoded_bytes += processor.decoded_bytes
 
         return decoded_bytes
+    
+
+    def get_header_drop_packets(self) -> int:
+        """
+        Return packets dropped due to no header decoding
+        """
+
+        header_drop_packets = 0
+        processor : Processor
+        for processor in self._processors:
+            header_drop_packets += processor.header_drop_packets
+
+        return header_drop_packets
     
 
     def run(self, events: list[AbstractEvent]) -> None:

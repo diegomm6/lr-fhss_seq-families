@@ -38,11 +38,13 @@ class Processor():
             collision event and if so updates the counter of collided fragments
     """
 
-    def __init__(self, granularity: int, CR: int, use_earlydrop: bool) -> None:
+    def __init__(self, granularity: int, CR: int, use_earlydrop: bool,
+                 use_headerdrop: bool) -> None:
         self.CR = CR
         self.granularity = granularity
         self.header_slots = int(self.granularity * 7 / 3)
         self.use_earlydrop = use_earlydrop
+        self.use_headerdrop = use_headerdrop
         self._current_tx : LoRaTransmission = None
         self._header_status = []
         self._fragment_status = []
@@ -51,6 +53,7 @@ class Processor():
         self.decoded_bytes = 0
         self.decoded_payloads = 0
         self.collided_payloads = 0
+        self.header_drop_packets = 0
 
 
     def reset(self) -> None:
@@ -66,6 +69,7 @@ class Processor():
         self.decoded_bytes = 0
         self.decoded_payloads = 0
         self.collided_payloads = 0
+        self.header_drop_packets = 0
 
     
     def clear_transmission(self) -> None:
@@ -160,13 +164,19 @@ class Processor():
             if self._current_tx.ocw == ocw and current_obw == obw:
                 self._fragment_status[current_fragment_id] = 1
 
-        # early drop
-        if self.use_earlydrop:
-            thershold = self._current_tx.numFragments - self.get_minfragments(self._current_tx.numFragments)
-            collided_fragments = (self._fragment_status == 1).sum()
-            if collided_fragments > thershold:
-                self.collided_payloads += 1
-                self.clear_transmission()
+            # early drop
+            if self.use_earlydrop:
+                thershold = self._current_tx.numFragments - self.get_minfragments(self._current_tx.numFragments)
+                collided_fragments = (self._fragment_status == 1).sum()
+                if collided_fragments > thershold:
+                    self.collided_payloads += 1
+                    self.clear_transmission()
+
+            # header drop
+            if self.use_headerdrop:
+                if (self._header_status == 1).sum() == self._current_tx.header_replicas:
+                    self.header_drop_packets += 1
+                    self.clear_transmission()
 
 
     # if collided fragments surpass the threshold
