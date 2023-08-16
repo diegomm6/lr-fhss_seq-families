@@ -25,9 +25,9 @@ def get_simdata(v):
     
     #decoded = simulation.run(runs)
 
-    occupancy = simulation.channel_occupancy(runs)
+    occupancy = simulation.total_collided_slots(runs)
 
-    return np.mean(occupancy)
+    return occupancy # np.mean(occupancy)
 
 
 if __name__ == "__main__":
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     #print('avg_decoded_payloads\n', [round(i[0],6) for i in result])
     #print('avg_decoded_packets\n', [round(i[1],6) for i in result])
 
-    print('avg_channel_occupancy\n', [round(i,6) for i in result])
+    print('total_collided_slots\n', [round(i,6) for i in result])
 
 
     """

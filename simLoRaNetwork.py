@@ -7,14 +7,14 @@ from src.models.LoRaNetwork import LoRaNetwork
 
 def get_simdata(v):
 
-    runs = 10
+    runs = 1
     simTime = 912
     numOCW = 7
     numOBW = 280
     numGrids = 8
     granularity = 6
     numDecoders = 100
-    CR = 1
+    CR = 2
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = True
@@ -49,7 +49,7 @@ def get_simdata(v):
 
 if __name__ == "__main__":
 
-    print('lifan\tCR = 1\tprocessors = 100\tearly d/d = NO')
+    print('lifan\tCR = 2\tprocessors = 100\tearly d/d = YES')
 
     netSizes = np.logspace(1.0, 4.0, num=50)
 
