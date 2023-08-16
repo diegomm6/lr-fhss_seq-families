@@ -54,6 +54,7 @@ class Processor():
         self.decoded_payloads = 0
         self.collided_payloads = 0
         self.header_drop_packets = 0
+        self.header_tolerance = 4
 
 
     def reset(self) -> None:
@@ -91,6 +92,16 @@ class Processor():
         """
 
         return np.ceil(self.CR * seq_length / 3)
+    
+
+    def get_collided_headers(self) -> int:
+
+        collided_headers = 0
+        for header in self._header_status:
+            if (header == 1).sum() > self.header_tolerance:
+                collided_headers += 1
+
+        return collided_headers
 
 
     def start_decoding(self, start_event : StartEvent) -> None:
@@ -100,7 +111,7 @@ class Processor():
 
         self.is_busy = True
         self._current_tx = start_event._transmission
-        self._header_status = np.zeros(int(start_event._transmission.header_replicas))
+        self._header_status = np.zeros((int(start_event._transmission.header_replicas), self.header_slots))
         self._fragment_status = np.zeros(int(start_event._transmission.numFragments))
         
 
@@ -121,7 +132,7 @@ class Processor():
             
             if collided_fragments <= thershold:
 
-                if (self._header_status == 1).sum() < self._current_tx.header_replicas:
+                if self.get_collided_headers() < self._current_tx.header_replicas:
                     self.decoded_packets += 1
 
                 self.decoded_payloads += 1
@@ -147,18 +158,20 @@ class Processor():
         obw = collision_event._obw
 
         header_total_slots = self._current_tx.header_replicas * self.header_slots
+        relative_timeslot = t - self._current_tx.startSlot
 
         # header collision
-        if (t - self._current_tx.startSlot) < header_total_slots:
-            current_header_id = (t - self._current_tx.startSlot) // self.header_slots
+        if relative_timeslot < header_total_slots:
+            current_timeslot = relative_timeslot %  self.header_slots
+            current_header_id = relative_timeslot // self.header_slots
             current_obw = self._current_tx.sequence[current_header_id]
 
             if self._current_tx.ocw == ocw and current_obw == obw:
-                self._header_status[current_header_id] = 1
+                self._header_status[current_header_id][current_timeslot] = 1
 
         # fragment collision
         else:
-            current_fragment_id = (t - self._current_tx.startSlot - header_total_slots) // self.granularity
+            current_fragment_id = (relative_timeslot - header_total_slots) // self.granularity
             current_obw = self._current_tx.sequence[current_fragment_id + self._current_tx.header_replicas]
 
             if self._current_tx.ocw == ocw and current_obw == obw:
@@ -174,7 +187,7 @@ class Processor():
 
             # header drop
             if self.use_headerdrop:
-                if (self._header_status == 1).sum() == self._current_tx.header_replicas:
+                if self.get_collided_headers() == self._current_tx.header_replicas:
                     self.header_drop_packets += 1
                     self.clear_transmission()
 
@@ -199,7 +212,7 @@ class Processor():
 
         if validFragments >= self.get_minfragments(self._current_tx.numFragments):
 
-            if (self._header_status == 1).sum() < self._current_tx.header_replicas:
+            if self.get_collided_headers() < self._current_tx.header_replicas:
                 self.decoded_packets += 1
 
             self.decoded_payloads += 1
