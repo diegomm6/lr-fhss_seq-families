@@ -184,6 +184,7 @@ class Processor():
                 if collided_fragments > thershold:
                     self.collided_payloads += 1
                     self.clear_transmission()
+                    return
 
             # header drop
             if self.use_headerdrop:

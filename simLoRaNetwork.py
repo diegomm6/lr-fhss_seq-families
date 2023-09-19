@@ -7,17 +7,17 @@ from src.models.LoRaNetwork import LoRaNetwork
 
 def get_simdata(v):
 
-    runs = 1
+    runs = 10
     simTime = 912
     numOCW = 7
     numOBW = 280
     numGrids = 8
     granularity = 6
     numDecoders = 100
-    CR = 2
+    CR = 1
     use_earlydecode = True
     use_earlydrop = True
-    use_headerdrop = True
+    use_headerdrop = False
     familyname = "lifan"
 
     numNodes = int(v)
@@ -49,11 +49,11 @@ def get_simdata(v):
 
 if __name__ == "__main__":
 
-    print('lifan\tCR = 2\tprocessors = 100\tearly d/d = YES')
+    print('lifan\tCR = 1\tprocessors = 100\tearly d/d = YES\thdr drop = NO')
 
     netSizes = np.logspace(1.0, 4.0, num=50)
 
-    pool = Pool(processes = 1)
+    pool = Pool(processes = 15)
     result = pool.map(get_simdata, netSizes)
     pool.close()
     pool.join()

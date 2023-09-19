@@ -21,12 +21,13 @@ def get_hashFHS(x, q):
     for k in range(q):
         fhs.append(get_obw(x, k))
         
-    return fhs
+    return np.array(fhs) + np.random.randint(8)
 
 class HashFamily(FHSfamily):
 
     def __init__(self, q) -> None:
         super().__init__(q)
+        self.FHSfam = self.get_family(384)
 
     # obatin a family of m sequences of length q
     def get_family(self, m):
@@ -35,3 +36,7 @@ class HashFamily(FHSfamily):
             fam.append(get_hashFHS(x, self.q))
 
         return np.array(fam)
+    
+    def get_random_sequence(self):
+        seq_id = np.random.randint(len(self.FHSfam))
+        return self.FHSfam[seq_id]
