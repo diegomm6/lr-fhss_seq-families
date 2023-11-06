@@ -23,7 +23,7 @@ class LoRaNetwork():
 
         assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
 
-        max_packet_length_in_slots = (31 * granularity) + (3 * int(granularity * 7 / 3))
+        max_packet_length_in_slots = (31 * granularity) + (3 * round(self.granularity * 233 / 102.4))
         startLimit = simTime - max_packet_length_in_slots
         self.nodes = [LoRaNode(i, CR, numOCW, startLimit) for i in range(numNodes)]
 
@@ -75,7 +75,7 @@ class LoRaNetwork():
 
                 used_timeslots = self.granularity # write fragment
                 if fh < tx.header_replicas:       # write header
-                    used_timeslots = int(self.granularity * 7 / 3)
+                    used_timeslots = round(self.granularity * 233 / 102.4)
 
                 for g in range(used_timeslots):
                     collision_matrix[tx.ocw][obw][time + g] += 1
@@ -120,7 +120,7 @@ class LoRaNetwork():
         end_events = []
         for tx in transmissions:
 
-            tx_end = tx.startSlot + (tx.header_replicas * int(self.granularity * 7 / 3)) + \
+            tx_end = tx.startSlot + (tx.header_replicas * round(self.granularity * 233 / 102.4)) + \
                 (tx.numFragments * self.granularity) - 1
             
             new_end_event = EndEvent(tx_end, 'end', tx)
