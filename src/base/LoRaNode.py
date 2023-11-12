@@ -71,17 +71,17 @@ class LoRaNode():
 
         if self.CR == 1:
             payload_size = 58
-            header_replicas = 3
+            numHeaders = 3
 
         elif self.CR == 2:
             payload_size = 121
-            header_replicas = 2
+            numHeaders = 2
 
         else:
             raise Exception(f"Invalid coding rate '{self.CR}'") 
 
         numFragments = self.numHops(payload_size)
-        seq_length = int(numFragments + header_replicas)
+        seq_length = int(numFragments + numHeaders)
 
         sequence = family.get_random_sequence()
         sequence = sequence[:seq_length]
@@ -89,8 +89,11 @@ class LoRaNode():
         self.sent_packets += 1
         self.sent_payload_bytes += payload_size
 
+        dopplerShift = 20000 * np.random.uniform()
+        if np.random.uniform() > 0.5:
+            dopplerShift *= -1
 
-        tx = LoRaTransmission(self.id, self.id, startSlot, ocw, header_replicas,
-                              payload_size, numFragments, sequence)
+        tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders,
+                              payload_size, numFragments, sequence, dopplerShift)
 
         return [tx]

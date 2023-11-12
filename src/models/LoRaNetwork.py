@@ -11,34 +11,26 @@ from src.families.LempelGreenbergMethod import LempelGreenbergFamily
 
 class LoRaNetwork():
 
-    def __init__(self, numNodes, familyname, numOCW, numOBW, numGrids, CR, granularity,
+    def __init__(self, numNodes, familyname, numOCW, numOBW, numGrids, CR, timeGranularity, freqGranularity,
                  simTime, numDecoders, use_earlydecode, use_earlydrop, use_headerdrop) -> None:
         
         self.numOCW = numOCW
         self.numOBW = numOBW
-        self.granularity = granularity
+        self.timeGranularity = timeGranularity
+        self.freqGranularity = freqGranularity
         self.simTime = simTime
         self.use_earlydecode = use_earlydecode
         self.FHSfam = self.set_FHSfamily(familyname, numGrids)
 
         assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
 
-        max_packet_length_in_slots = (31 * granularity) + (3 * round(self.granularity * 233 / 102.4))
+        max_packet_length_in_slots = (31 * timeGranularity) + (3 * round(timeGranularity * 233 / 102.4))
         startLimit = simTime - max_packet_length_in_slots
         self.nodes = [LoRaNode(i, CR, numOCW, startLimit) for i in range(numNodes)]
 
         # add support for multiple gateways in the future
-        self.gateway = LoRaGateway(granularity, CR, use_earlydrop, use_headerdrop, numDecoders)
-
-
-    def get_transmissions(self) -> list[LoRaTransmission]:
-
-        transmissions = []
-        node : LoRaNode
-        for node in self.nodes:
-            transmissions += node.get_transmissions(self.FHSfam)
-
-        return transmissions
+        self.gateway = LoRaGateway(CR, timeGranularity, freqGranularity, use_earlydrop, 
+                                   use_earlydecode, use_headerdrop, numDecoders)
     
 
     def set_FHSfamily(self, familyname, numGrids):
@@ -61,24 +53,54 @@ class LoRaNetwork():
 
         else:
             raise Exception(f"Invalid family name '{familyname}'")
+        
+
+    def get_transmissions(self) -> list[LoRaTransmission]:
+
+        transmissions = []
+        node : LoRaNode
+        for node in self.nodes:
+            transmissions += node.get_transmissions(self.FHSfam)
+
+        sorted_txs = sorted(transmissions)
+
+        #for tx in sorted_txs: print(tx)
+
+        return sorted_txs
     
 
     def get_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
 
-        collision_matrix = np.zeros((self.numOCW, self.numOBW, self.simTime))
+        
+        carrierOffset = 0
+        maxDopplerShift = 20000
+        maxShift = carrierOffset + maxDopplerShift
+
+        freqPerSlot= 488.28125 / self.freqGranularity
+
+        frequencySlots = int(self.numOBW * self.freqGranularity + 2 * maxShift / freqPerSlot)
+
+        collision_matrix = np.zeros((self.numOCW, frequencySlots, self.simTime))
         
         tx : LoRaTransmission
         for tx in transmissions:
 
+            baseFreq = round((maxShift + tx.dopplerShift) / freqPerSlot)
+
             time = tx.startSlot
             for fh, obw in enumerate(tx.sequence):
 
-                used_timeslots = self.granularity # write fragment
-                if fh < tx.header_replicas:       # write header
-                    used_timeslots = round(self.granularity * 233 / 102.4)
+                fragFreq = obw * self.freqGranularity
 
-                for g in range(used_timeslots):
-                    collision_matrix[tx.ocw][obw][time + g] += 1
+                used_timeslots = self.timeGranularity # write fragment
+                if fh < tx.numHeaders:           # write header
+                    used_timeslots = round(self.timeGranularity * 233 / 102.4)
+
+                for ts in range(used_timeslots):
+
+                    for fs in range(self.freqGranularity):
+
+                        collision_matrix[tx.ocw][baseFreq + fragFreq + fs][time + ts] += 1
 
                 time += used_timeslots
 
@@ -120,8 +142,8 @@ class LoRaNetwork():
         end_events = []
         for tx in transmissions:
 
-            tx_end = tx.startSlot + (tx.header_replicas * round(self.granularity * 233 / 102.4)) + \
-                (tx.numFragments * self.granularity) - 1
+            tx_end = tx.startSlot + (tx.numHeaders * round(self.timeGranularity * 233 / 102.4)) + \
+                (tx.numFragments * self.timeGranularity) - 1
             
             new_end_event = EndEvent(tx_end, 'end', tx)
             end_events.append(new_end_event)
@@ -196,6 +218,17 @@ class LoRaNetwork():
         events = self.get_events(collision_matrix, transmissions)
 
         self.gateway.run(events)
+
+
+    def run2(self) -> None:
+        transmissions = self.get_transmissions()
+        collision_matrix = self.get_collision_matrix(transmissions)
+
+        self.gateway.run2(transmissions, collision_matrix)
+
+    
+    def get_m(self):
+        return self.get_collision_matrix(self.get_transmissions())
     
 
     def restart(self) -> None:

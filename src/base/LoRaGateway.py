@@ -1,3 +1,4 @@
+import numpy as np
 from src.base.Event import *
 from src.base.Processor import Processor
 
@@ -23,8 +24,11 @@ class LoRaGateway():
         run(list[AbstractEvent]): Execute all given events.
     """
 
-    def __init__(self, granularity: int, CR: int, use_earlydrop: bool, use_headerdrop: bool, numDecoders: int) -> None:
-        self._processors = [Processor(granularity, CR, use_earlydrop, use_headerdrop) for _ in range(numDecoders)]
+    def __init__(self, CR: int, timeGranularity: int, freqGranularity: int, use_earlydrop: bool, 
+                 use_earlydecode: bool, use_headerdrop: bool, numDecoders: int) -> None:
+        self.numDecoders = numDecoders
+        self._processors = [Processor(CR, timeGranularity, freqGranularity, use_earlydrop, 
+                                      use_earlydecode, use_headerdrop) for _ in range(numDecoders)]
     
 
     def restart(self) -> None:
@@ -115,6 +119,21 @@ class LoRaGateway():
             header_drop_packets += processor.header_drop_packets
 
         return header_drop_packets
+    
+
+    def run2(self, transmissions: list[LoRaTransmission], collision_matrix: np.ndarray) -> None:
+
+        freeUpTimes = np.zeros(self.numDecoders)
+
+        for tx in transmissions:
+
+            for i, fut in enumerate(freeUpTimes):
+
+                if tx.startSlot >= fut:
+                    processor = self._processors[i]
+                    freeUpTimes[i] = processor.decode(tx, collision_matrix)
+                    break
+
     
 
     def run(self, events: list[AbstractEvent]) -> None:

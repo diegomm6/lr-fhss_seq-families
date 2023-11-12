@@ -13,14 +13,18 @@ class LoRaTransmission():
         sequence (list[int]): sequence of frequence hopping channels 
     """
 
-    def __init__(self, id: int, node_id: int, startSlot: int, ocw: int, header_replicas: int,
-                 payload_size: int, numFragments: int, sequence: list[int]) -> None:
+    def __init__(self, id: int, node_id: int, startSlot: int, ocw: int, numHeaders: int,
+                 payload_size: int, numFragments: int, sequence: list[int], dopplerShift: float) -> None:
         self.id = id
         self.node_id = node_id
         self.startSlot = startSlot
         self.ocw = ocw
-        self.header_replicas = header_replicas
+        self.numHeaders = numHeaders
         self.payload_size = payload_size
         self.numFragments = numFragments
         self.sequence = sequence
+        self.dopplerShift = dopplerShift
+    
+    def __lt__(self, other) -> bool:
+        return self.startSlot < other.startSlot
     
