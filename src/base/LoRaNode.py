@@ -1,4 +1,5 @@
-import numpy as np
+import random
+from src.base.base import get_randomDoppler
 from src.base.LoRaTransmission import LoRaTransmission
 from src.families.LR_FHSS_DriverMethod import FHSfamily
 
@@ -43,7 +44,7 @@ class LoRaNode():
     def restart(self) -> None:
         self.sent_packets = 0
         self.sent_payload_bytes = 0
-
+          
 
     def numHops(self, payload_length: int) -> int:
         """
@@ -54,7 +55,7 @@ class LoRaNode():
         length_bits = ( payload_length + 2 ) * 8 + 6
         length_bits *= (3/self.CR)
 
-        nb_hops_out = ( length_bits + 47 ) // 48
+        nb_hops_out = ( length_bits + 47 ) // 48  # can be just ceil(bits/48)
 
         return nb_hops_out
 
@@ -66,15 +67,15 @@ class LoRaNode():
         therefore we use the node id as the transmission id
         """
 
-        ocw = np.random.randint(self.numOCW)
-        startSlot = np.random.randint(self.startLimit)
+        ocw = random.randrange(0, self.numOCW)
+        startSlot = random.randrange(0, self.startLimit)
 
         if self.CR == 1:
-            payload_size = 58
+            payload_size = random.randrange(13, 58)  # 8 - 30 fragments
             numHeaders = 3
 
         elif self.CR == 2:
-            payload_size = 121
+            payload_size = random.randrange(29, 118) # 8 - 30 fragments
             numHeaders = 2
 
         else:
@@ -89,9 +90,7 @@ class LoRaNode():
         self.sent_packets += 1
         self.sent_payload_bytes += payload_size
 
-        dopplerShift = 20000 * np.random.uniform()
-        if np.random.uniform() > 0.5:
-            dopplerShift *= -1
+        dopplerShift = get_randomDoppler()
 
         tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders,
                               payload_size, numFragments, sequence, dopplerShift)

@@ -28,3 +28,6 @@ class LoRaTransmission():
     def __lt__(self, other) -> bool:
         return self.startSlot < other.startSlot
     
+    def __str__(self) -> str:
+        return f"tx {self.id} at time {self.startSlot}, {self.numFragments} fragments"
+    

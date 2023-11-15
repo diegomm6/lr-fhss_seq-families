@@ -1,3 +1,4 @@
+import random
 import numpy as np
 from src.families.FHSfamily import FHSfamily
 from src.base.base import gcd, get_min_gap, filter_freq, split_seq
@@ -95,5 +96,5 @@ class LiFanFamily(FHSfamily):
         
 
     def get_random_sequence(self):
-        seq_id = np.random.randint(len(self.FHSfam))
+        seq_id = random.randrange(0, len(self.FHSfam))
         return self.FHSfam[seq_id]

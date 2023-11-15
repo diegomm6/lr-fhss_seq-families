@@ -18,21 +18,25 @@ class LoRaNetwork():
         self.numOBW = numOBW
         self.timeGranularity = timeGranularity
         self.freqGranularity = freqGranularity
+        self.header_slots = round(timeGranularity * 233.472 / 102.4)
         self.simTime = simTime
         self.use_earlydecode = use_earlydecode
         self.FHSfam = self.set_FHSfamily(familyname, numGrids)
 
         assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
 
-        max_packet_length_in_slots = (31 * timeGranularity) + (3 * round(timeGranularity * 233 / 102.4))
+        max_packet_length_in_slots = 31 * timeGranularity + 3 * self.header_slots
         startLimit = simTime - max_packet_length_in_slots
         self.nodes = [LoRaNode(i, CR, numOCW, startLimit) for i in range(numNodes)]
 
         # add support for multiple gateways in the future
         self.gateway = LoRaGateway(CR, timeGranularity, freqGranularity, use_earlydrop, 
                                    use_earlydecode, use_headerdrop, numDecoders)
-    
+        
+        self.header = np.ones((freqGranularity, self.header_slots))
+        self.fragment = np.ones((freqGranularity, timeGranularity))
 
+    
     def set_FHSfamily(self, familyname, numGrids):
 
         if familyname == "lemgreen":
@@ -63,7 +67,6 @@ class LoRaNetwork():
             transmissions += node.get_transmissions(self.FHSfam)
 
         sorted_txs = sorted(transmissions)
-
         #for tx in sorted_txs: print(tx)
 
         return sorted_txs
@@ -71,13 +74,11 @@ class LoRaNetwork():
 
     def get_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
 
-        
         carrierOffset = 0
         maxDopplerShift = 20000
         maxShift = carrierOffset + maxDopplerShift
 
-        freqPerSlot= 488.28125 / self.freqGranularity
-
+        freqPerSlot = 488.28125 / self.freqGranularity
         frequencySlots = int(self.numOBW * self.freqGranularity + 2 * maxShift / freqPerSlot)
 
         collision_matrix = np.zeros((self.numOCW, frequencySlots, self.simTime))
@@ -90,92 +91,26 @@ class LoRaNetwork():
             time = tx.startSlot
             for fh, obw in enumerate(tx.sequence):
 
-                fragFreq = obw * self.freqGranularity
+                startFreq = baseFreq + obw * self.freqGranularity
+                endFreq = startFreq + self.freqGranularity
 
-                used_timeslots = self.timeGranularity # write fragment
-                if fh < tx.numHeaders:           # write header
-                    used_timeslots = round(self.timeGranularity * 233 / 102.4)
+                # write header
+                if fh < tx.numHeaders:
+                    endTime = time + self.header_slots
+                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.header
 
-                for ts in range(used_timeslots):
-
-                    for fs in range(self.freqGranularity):
-
-                        collision_matrix[tx.ocw][baseFreq + fragFreq + fs][time + ts] += 1
-
-                time += used_timeslots
+                # write fragment
+                else:
+                    endTime = time + self.timeGranularity
+                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.fragment
+                
+                time = endTime
 
         return collision_matrix
     
 
-    def get_events(self, collision_matrix: np.ndarray, transmissions: list[LoRaTransmission]) \
-    -> list[EndEvent | CollisionEvent | StartEvent | EarlyDecodeEvent]:
-
-        start_events = self.get_start_events(transmissions)
-        collision_events = self.get_collision_events(collision_matrix)
-        end_events = self.get_end_events(transmissions)
-
-        events = start_events + collision_events + end_events
-
-        if self.use_earlydecode:
-            events += self.get_earlydecode_events()
-
-        sorted_events = sorted(events)
-
-        #for ev in sorted_events: print(ev)
-
-        return sorted_events
-        
-
-    def get_start_events(self, transmissions: list[LoRaTransmission]) -> list[StartEvent]:
-
-        start_events = []
-        tx : LoRaTransmission
-        for tx in transmissions:
-            new_start_event = StartEvent(tx.startSlot, 'start', tx)
-            start_events.append(new_start_event)
-
-        return start_events
-    
-
-    def get_end_events(self, transmissions: list[LoRaTransmission]) -> list[EndEvent]:
-
-        end_events = []
-        for tx in transmissions:
-
-            tx_end = tx.startSlot + (tx.numHeaders * round(self.timeGranularity * 233 / 102.4)) + \
-                (tx.numFragments * self.timeGranularity) - 1
-            
-            new_end_event = EndEvent(tx_end, 'end', tx)
-            end_events.append(new_end_event)
-
-        return end_events
-    
-
-    def get_collision_events(self, collision_matrix: np.ndarray) -> list[CollisionEvent]:
-
-        collision_events = []
-        for t in range(self.simTime):
-            sub_collision_matrix = collision_matrix[:,:,t]
-            indeces = np.where(sub_collision_matrix > 1)
-
-            for ocw, obw in zip(indeces[0], indeces[1]):
-                new_collision_event = CollisionEvent(t, 'collision', ocw, obw)
-                collision_events.append(new_collision_event)
-
-        return collision_events
-    
-
-    def get_earlydecode_events(self, period=1) -> list[EarlyDecodeEvent]:
-
-        earlydecode_events = []
-        t = period
-        while t < self.simTime:
-            new_earlydecode_event = EarlyDecodeEvent(t, 'early_decode')
-            earlydecode_events.append(new_earlydecode_event)
-            t += period
-
-        return earlydecode_events
-
+    def get_tracked_txs(self) -> int:
+        return self.gateway.get_tracked_txs()
 
     def get_collided_payloads(self) -> int:
         return self.gateway.get_collided_payloads()
@@ -209,22 +144,13 @@ class LoRaNetwork():
             sent_bytes += node.sent_payload_bytes
 
         return sent_bytes
-    
+
 
     def run(self) -> None:
-
-        transmissions = self.get_transmissions()
-        collision_matrix = self.get_collision_matrix(transmissions)
-        events = self.get_events(collision_matrix, transmissions)
-
-        self.gateway.run(events)
-
-
-    def run2(self) -> None:
         transmissions = self.get_transmissions()
         collision_matrix = self.get_collision_matrix(transmissions)
 
-        self.gateway.run2(transmissions, collision_matrix)
+        self.gateway.run(transmissions, collision_matrix)
 
     
     def get_m(self):

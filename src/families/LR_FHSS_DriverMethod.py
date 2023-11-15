@@ -1,3 +1,4 @@
+import random
 import numpy as np
 from src.families.FHSfamily import FHSfamily
 
@@ -93,13 +94,13 @@ class LR_FHSS_DriverFamily(FHSfamily):
     def set_family(self):
         fam = []
         for id in range(self.numFHS):
-            fhs = (self.get_lr_fhss_seq(id) * self.grid_gap) + np.random.randint(self.grid_gap)
+            fhs = (self.get_lr_fhss_seq(id) * self.grid_gap) + random.randrange(0, self.grid_gap)
             fam.append(fhs)
 
         return np.array(fam)
     
 
     def get_random_sequence(self):
-        seq_id = np.random.randint(len(self.FHSfam))
+        seq_id = random.randrange(0, len(self.FHSfam))
         return self.FHSfam[seq_id]
     

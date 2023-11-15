@@ -39,18 +39,18 @@ class LoRaGateway():
         for processor in self._processors:
             processor.reset()
 
-
-    def available_processor(self) -> Processor | None:
+    
+    def get_tracked_txs(self) -> int:
         """
-        Return the first availabe processor or None if no processor is available
+        Return total tracked frames by the gateway
         """
 
+        tracked_txs = 0
         processor : Processor
         for processor in self._processors:
-            if not processor.is_busy:
-                return processor
+            tracked_txs += processor.tracked_txs
 
-        return None
+        return tracked_txs
     
 
     def get_collided_payloads(self) -> int:
@@ -121,7 +121,7 @@ class LoRaGateway():
         return header_drop_packets
     
 
-    def run2(self, transmissions: list[LoRaTransmission], collision_matrix: np.ndarray) -> None:
+    def run(self, transmissions: list[LoRaTransmission], collision_matrix: np.ndarray) -> None:
 
         freeUpTimes = np.zeros(self.numDecoders)
 
@@ -134,31 +134,4 @@ class LoRaGateway():
                     freeUpTimes[i] = processor.decode(tx, collision_matrix)
                     break
 
-    
 
-    def run(self, events: list[AbstractEvent]) -> None:
-        """
-        Execute all given events
-        """
-
-        for event in events:
-        
-            if event._name == 'start':
-                processor = self.available_processor()
-                if processor is not None:
-                    processor.start_decoding(event)
-
-            elif event._name == 'collision':
-                for processor in self._processors:
-                    processor.handle_collision(event)
-
-            elif event._name == 'end':
-                for processor in self._processors:
-                    processor.finish_decoding(event)
-
-            elif event._name == 'early_decode':
-                for processor in self._processors:
-                    processor.early_decode(event)
-
-            else:
-                raise Exception(f"Invalid event name '{event._name}'") 
