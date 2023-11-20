@@ -39,86 +39,76 @@ class LoRaGateway():
         for processor in self._processors:
             processor.reset()
 
-    
     def get_tracked_txs(self) -> int:
         """
         Return total tracked frames by the gateway
         """
-
         tracked_txs = 0
         processor : Processor
         for processor in self._processors:
             tracked_txs += processor.tracked_txs
-
         return tracked_txs
     
-
-    def get_collided_payloads(self) -> int:
-        """
-        Return total collided payloads
-        """
-
-        collided_payloads = 0
-        processor : Processor
-        for processor in self._processors:
-            collided_payloads += processor.collided_payloads
-
-        return collided_payloads
-    
-
-    def get_decoded_packets(self) -> int:
-        """
-        Return total successfully decoded packets,
-        successful payload reception and at least one header
-        """
-
-        decoded_packets = 0
-        processor : Processor
-        for processor in self._processors:
-            decoded_packets += processor.decoded_packets
-
-        return decoded_packets
-    
-
-    def get_decoded_payloads(self) -> int:
-        """
-        Return total successfully decoded payloads,
-        regardless of header successful reception
-        """
-
-        decoded_payloads = 0
-        processor : Processor
-        for processor in self._processors:
-            decoded_payloads += processor.decoded_payloads
-
-        return decoded_payloads
-    
-
     def get_decoded_bytes(self) -> int:
         """
-        Return total successfully decoded bytes,
-        considering only payload data
+        Return total successfully decoded bytes
         """
-
         decoded_bytes = 0
         processor : Processor
         for processor in self._processors:
             decoded_bytes += processor.decoded_bytes
-
         return decoded_bytes
     
-
     def get_header_drop_packets(self) -> int:
         """
         Return packets dropped due to no header decoding
         """
-
         header_drop_packets = 0
         processor : Processor
         for processor in self._processors:
             header_drop_packets += processor.header_drop_packets
-
         return header_drop_packets
+    
+    def get_decoded_hrd_pld(self) -> int:
+        """
+        Return total fully decoded packets
+        """
+        decoded_hrd_pld = 0
+        processor : Processor
+        for processor in self._processors:
+            decoded_hrd_pld += processor.decoded_hrd_pld
+        return decoded_hrd_pld
+
+    def get_decoded_hdr(self) -> int:
+        """
+        Return total decoded headers with collided payload
+        """
+        decoded_hdr = 0
+        processor : Processor
+        for processor in self._processors:
+            decoded_hdr += processor.decoded_hdr
+
+        return decoded_hdr
+    
+    def get_decodable_pld(self) -> int:
+        """
+        Return total decodable payloads with collided header
+        """
+        decodable_pld = 0
+        processor : Processor
+        for processor in self._processors:
+            decodable_pld += processor.decodable_pld
+        return decodable_pld
+    
+    def get_collided_hdr_pld(self) -> int:
+        """
+        Return total fully collided packets
+        """
+        collided_hdr_pld = 0
+        processor : Processor
+        for processor in self._processors:
+            collided_hdr_pld += processor.collided_hdr_pld
+        return collided_hdr_pld
     
 
     def run(self, transmissions: list[LoRaTransmission], collision_matrix: np.ndarray) -> None:

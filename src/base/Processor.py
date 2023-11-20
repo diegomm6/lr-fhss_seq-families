@@ -50,11 +50,12 @@ class Processor():
         self.header_tolerance = 4
 
         self.tracked_txs = 0
-        self.decoded_packets = 0
         self.decoded_bytes = 0
-        self.decoded_payloads = 0
-        self.collided_payloads = 0
         self.header_drop_packets = 0
+        self.decoded_hrd_pld = 0  # case 1
+        self.decoded_hdr = 0      # case 3
+        self.decodable_pld = 0    # case 2
+        self.collided_hdr_pld = 0 # case 4
 
 
     def reset(self) -> None:
@@ -62,11 +63,12 @@ class Processor():
         Reset all counters and states to initial state
         """
         self.tracked_txs = 0
-        self.decoded_packets = 0
         self.decoded_bytes = 0
-        self.decoded_payloads = 0
-        self.collided_payloads = 0
         self.header_drop_packets = 0
+        self.decoded_hrd_pld = 0  # case 1
+        self.decoded_hdr = 0      # case 3
+        self.decodable_pld = 0    # case 2
+        self.collided_hdr_pld = 0 # case 4
 
 
     def get_minfragments(self, seq_length : int) -> int:
@@ -94,7 +96,7 @@ class Processor():
         collided_fragments = 0
 
         carrierOffset = 0
-        maxDopplerShift = 20000
+        maxDopplerShift = (200000 - 137000) / 2# 20000
         maxShift = carrierOffset + maxDopplerShift
         freqPerSlot= 488.28125 / self.freqGranularity
 
@@ -136,19 +138,32 @@ class Processor():
                 else:
                     decoded_fragments += 1
 
-                # early decode
+                # early decode - decoded or decodable payload
                 if self.use_earlydecode and decoded_fragments >= self.get_minfragments(tx.numFragments):
 
+                    # case 1
                     if collided_headers < tx.numHeaders:
-                        self.decoded_packets += 1
+                        self.decoded_hrd_pld += 1
+                        self.decoded_bytes += tx.payload_size
 
-                    self.decoded_payloads += 1
-                    self.decoded_bytes += tx.payload_size
+                    # case 2
+                    else:
+                        self.decodable_pld += 1
+
                     return endTime
 
-                # early drop
+                # early drop - collided payload
                 if self.use_earlydrop and collided_fragments > maxFrgCollisions:
-                    self.collided_payloads += 1
+                    
+                    # case 3
+                    if collided_headers < tx.numHeaders:
+                        self.decoded_hdr += 1
+
+                    # case 4
+                    else:
+                        self.collided_hdr_pld += 1
+                    
                     return endTime
 
                 time = endTime
+

@@ -75,7 +75,7 @@ class LoRaNetwork():
     def get_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
 
         carrierOffset = 0
-        maxDopplerShift = 20000
+        maxDopplerShift = (200000 - 137000) / 2# 20000
         maxShift = carrierOffset + maxDopplerShift
 
         freqPerSlot = 488.28125 / self.freqGranularity
@@ -111,21 +111,24 @@ class LoRaNetwork():
 
     def get_tracked_txs(self) -> int:
         return self.gateway.get_tracked_txs()
-
-    def get_collided_payloads(self) -> int:
-        return self.gateway.get_collided_payloads()
-
-    def get_decoded_packets(self) -> int:
-        return self.gateway.get_decoded_packets()
-
-    def get_decoded_payloads(self) -> int:
-        return self.gateway.get_decoded_payloads()
     
     def get_decoded_bytes(self) -> int:
         return self.gateway.get_decoded_bytes()
     
     def get_header_drop_packets(self) -> int:
         return self.gateway.get_header_drop_packets()
+
+    def get_decoded_hrd_pld(self) -> int:
+        return self.gateway.get_decoded_hrd_pld()
+
+    def get_decoded_hdr(self) -> int:
+        return self.gateway.get_decoded_hdr()
+
+    def get_decodable_pld(self) -> int:
+        return self.gateway.get_decodable_pld()
+    
+    def get_collided_hdr_pld(self) -> int:
+        return self.gateway.get_collided_hdr_pld()
     
 
     def get_sent_packets(self) -> int:
