@@ -56,6 +56,7 @@ class Processor():
         self.decoded_hdr = 0      # case 3
         self.decodable_pld = 0    # case 2
         self.collided_hdr_pld = 0 # case 4
+        self.decoded = []
 
 
     def reset(self) -> None:
@@ -69,6 +70,7 @@ class Processor():
         self.decoded_hdr = 0      # case 3
         self.decodable_pld = 0    # case 2
         self.collided_hdr_pld = 0 # case 4
+        self.decoded = []
 
 
     def get_minfragments(self, seq_length : int) -> int:
@@ -95,13 +97,11 @@ class Processor():
         decoded_fragments = 0
         collided_fragments = 0
 
-        carrierOffset = 0
-        maxDopplerShift = (200000 - 137000) / 2# 20000
-        maxShift = carrierOffset + maxDopplerShift
+        maxShift = (200000 - 137000) / 2
         freqPerSlot= 488.28125 / self.freqGranularity
 
         time = tx.startSlot
-        baseFreq = round((maxShift + tx.dopplerShift) / freqPerSlot)
+        baseFreq = round(maxShift / freqPerSlot) + round(tx.dopplerShift / freqPerSlot)
 
         maxFrgCollisions = tx.numFragments - self.get_minfragments(tx.numFragments)
 
@@ -145,6 +145,7 @@ class Processor():
                     if collided_headers < tx.numHeaders:
                         self.decoded_hrd_pld += 1
                         self.decoded_bytes += tx.payload_size
+                        self.decoded.append([tx, 1])
 
                     # case 2
                     else:
@@ -158,6 +159,7 @@ class Processor():
                     # case 3
                     if collided_headers < tx.numHeaders:
                         self.decoded_hdr += 1
+                        self.decoded.append([tx, 0])
 
                     # case 4
                     else:

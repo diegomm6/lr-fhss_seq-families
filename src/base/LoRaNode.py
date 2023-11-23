@@ -71,11 +71,11 @@ class LoRaNode():
         startSlot = random.randrange(0, self.startLimit)
 
         if self.CR == 1:
-            payload_size = random.randrange(13, 58)  # 8 - 30 fragments
+            payload_size = 57 # random.randrange(13, 58)  # [8-31[ fragments
             numHeaders = 3
 
         elif self.CR == 2:
-            payload_size = random.randrange(29, 118) # 8 - 30 fragments
+            payload_size = 117 # random.randrange(29, 118) # [8-31[ fragments
             numHeaders = 2
 
         else:
@@ -84,7 +84,7 @@ class LoRaNode():
         numFragments = self.numHops(payload_size)
         seq_length = int(numFragments + numHeaders)
 
-        sequence = family.get_random_sequence()
+        seqid, sequence = family.get_random_sequence()
         sequence = sequence[:seq_length]
 
         self.sent_packets += 1
@@ -93,6 +93,6 @@ class LoRaNode():
         dopplerShift = get_randomDoppler()
 
         tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders,
-                              payload_size, numFragments, sequence, dopplerShift)
+                              payload_size, numFragments, sequence, seqid, dopplerShift)
 
         return [tx]

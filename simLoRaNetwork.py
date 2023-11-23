@@ -6,37 +6,49 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from src.models.LoRaNetwork import LoRaNetwork
 
+def get_decoded_m():
 
-def get_m():
-    
     simTime = 500
     numOCW = 1
     numOBW = 280
     numGrids = 8
     timeGranularity = 6
     freqGranularity = 7
-    numDecoders = 100
-    CR = 2
+    numDecoders = 1000
+    CR = 1
     use_earlydecode = True
     use_earlydrop = True
-    use_headerdrop = True
+    use_headerdrop = False
     familyname = "driver"
-    numNodes = 200
+    numNodes = 250
+
+    random.seed(0)
 
     network = LoRaNetwork(numNodes, familyname, numOCW, numOBW, numGrids, CR, timeGranularity,
                           freqGranularity, simTime, numDecoders, use_earlydecode, use_earlydrop,
                           use_headerdrop)
 
-    m = network.get_m()
+    transmissions = network.get_transmissions()
+    collision_matrix = network.get_collision_matrix(transmissions)
+    network.gateway.run(transmissions, collision_matrix)
 
-    fslots, tslots = m[0].shape
+    decoded_m = network.get_decoded_matrix(binary=False)
+
+    #collision_matrix[collision_matrix > 1] = 1
+
+    diff = np.subtract(collision_matrix, decoded_m)
+
+    fslots, tslots = decoded_m[0].shape
     tmax =  round(tslots* 102.4/timeGranularity / 1000)
     fmax = round(fslots * 488.28125/freqGranularity / 1000)
 
+    network.milp_solve()
+    return
+
     fig = plt.figure(figsize=(18,12))
-    im = plt.imshow(m[0], extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
+    im = plt.imshow(diff[0], extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
     fig.colorbar(im)
-    plt.title('transmissions using 1 OCW channel')
+    plt.title('diff m using 1 OCW channel')
     plt.xlabel('s')
     plt.ylabel('kHz')
     plt.show()
@@ -46,8 +58,8 @@ def get_m():
 
 def get_simdata(v):
 
-    runs = 10
-    simTime = 7000
+    runs = 1
+    simTime = 500
     numOCW = 1
     numOBW = 280
     numGrids = 8
@@ -84,6 +96,7 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
+        network.milp_solve()
         network.restart()
 
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
@@ -96,13 +109,11 @@ def get_simdata(v):
 
 if __name__ == "__main__":
 
-    get_m()
 
-    """
     print('driver\tCR = 1\tprocessors = 1000\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 4.0, num=50)
-    #netSizes = [10]#, 1000, 2000, 5000, 10000]
+    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
+    #netSizes = [200]#, 1000, 2000, 5000, 10000]
 
     pool = Pool(processes = 15)
     result = pool.map(get_simdata, netSizes)
@@ -122,4 +133,4 @@ if __name__ == "__main__":
     print(basestr+'decoded_hdr,', [round(i[4],6) for i in result])
     print(basestr+'decodable_pld,', [round(i[5],6) for i in result])
     print(basestr+'collided_hdr_pld,', [round(i[6],6) for i in result])
-     """
+    

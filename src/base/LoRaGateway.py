@@ -38,6 +38,16 @@ class LoRaGateway():
         processor : Processor
         for processor in self._processors:
             processor.reset()
+        
+    def get_decoded(self) -> list:
+        """
+        Return decoded transmissiond, 1 means decoded payload
+        """
+        decoded = []
+        for processor in self._processors:
+            for tx_status in processor.decoded:
+                decoded.append(tx_status)
+        return decoded
 
     def get_tracked_txs(self) -> int:
         """

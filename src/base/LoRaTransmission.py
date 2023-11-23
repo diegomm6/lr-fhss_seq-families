@@ -14,7 +14,8 @@ class LoRaTransmission():
     """
 
     def __init__(self, id: int, node_id: int, startSlot: int, ocw: int, numHeaders: int,
-                 payload_size: int, numFragments: int, sequence: list[int], dopplerShift: float) -> None:
+                 payload_size: int, numFragments: int, sequence: list[int], seqid: int,
+                 dopplerShift: float) -> None:
         self.id = id
         self.node_id = node_id
         self.startSlot = startSlot
@@ -23,6 +24,7 @@ class LoRaTransmission():
         self.payload_size = payload_size
         self.numFragments = numFragments
         self.sequence = sequence
+        self.seqid = seqid
         self.dopplerShift = dopplerShift
     
     def __lt__(self, other) -> bool:

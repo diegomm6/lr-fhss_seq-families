@@ -102,5 +102,5 @@ class LR_FHSS_DriverFamily(FHSfamily):
 
     def get_random_sequence(self):
         seq_id = random.randrange(0, len(self.FHSfam))
-        return self.FHSfam[seq_id]
+        return seq_id, self.FHSfam[seq_id]
     
