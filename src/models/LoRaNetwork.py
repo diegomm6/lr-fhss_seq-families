@@ -219,12 +219,10 @@ class LoRaNetwork():
 
     def generate_extended_m(self):
 
-        fhsFam = self.FHSfam.FHSfam
         seq_length_range = 23  # max length(seqs) - min length(seqs) +1 over "y" axis
 
         extendedFamily = []
-        for fhs in fhsFam:
-        #    for i in range(10, 10+seq_length_range, 1):
+        for fhs in self.FHSfam.FHSfam:
             extendedFamily.append(fhs[:33])
 
         Tt = []
@@ -233,8 +231,8 @@ class LoRaNetwork():
         for tx in transmissions:
             t = tx.startSlot
             s = tx.seqid
-            #s = seq_length_range * np.where(fhsFam == tx.sequence) + len(tx.sequence)
-            Tt.append((t, s, len(tx.sequence)))
+            Tt.append((t, s))
+            #Tt.append((t, s, len(tx.sequence)))
             #print(f"time = {t}    seq = {s}    shift = {tx.dopplerShift//70}")
         
         collision_matrix = self.get_collision_matrix(transmissions)
@@ -250,7 +248,8 @@ class LoRaNetwork():
 
         start_time = time.process_time()
         #Tp = milpsolver.solve_by_milp(m, seqs)
-        Tp = milpsolver.create_Tp(m, seqs)
+        #Tp = milpsolver.create_Tp(m, seqs)
+        Tp = milpsolver.create_Tp_variable_length(m, seqs)
 
         solve_time = time.process_time() - start_time
-        milpsolver.print_metrics(Tt, Tp, solve_time)
+        return milpsolver.print_metrics(Tt, Tp, solve_time)

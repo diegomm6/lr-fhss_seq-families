@@ -96,12 +96,12 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
-        network.milp_solve()
+        tp, fp, fn = network.milp_solve()
         network.restart()
 
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
          avg_decoded_hrd_pld / runs, avg_decoded_hdr / runs, avg_decodable_pld / runs,
-         avg_collided_hdr_pld / runs]
+         avg_collided_hdr_pld / runs, tp, fp, fn]
 
     print(f"{numNodes}", x)
     return x
@@ -109,10 +109,9 @@ def get_simdata(v):
 
 if __name__ == "__main__":
 
-
     print('driver\tCR = 1\tprocessors = 1000\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
+    netSizes = np.logspace(2.0, 3.0, num=15) # np.logspace(1.0, 4.0, num=50)
     #netSizes = [200]#, 1000, 2000, 5000, 10000]
 
     pool = Pool(processes = 15)
@@ -133,4 +132,7 @@ if __name__ == "__main__":
     print(basestr+'decoded_hdr,', [round(i[4],6) for i in result])
     print(basestr+'decodable_pld,', [round(i[5],6) for i in result])
     print(basestr+'collided_hdr_pld,', [round(i[6],6) for i in result])
+    print(basestr+'tp,', [round(i[7],6) for i in result])
+    print(basestr+'fp,', [round(i[8],6) for i in result])
+    print(basestr+'fn,', [round(i[9],6) for i in result])
     

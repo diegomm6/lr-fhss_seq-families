@@ -22,6 +22,8 @@ class MILPsolver():
         self.maxDopplerSlots = round(20000 / freqPerSlot)
         self.baseFreq = round(maxShift / freqPerSlot)
 
+        self.min_seqlength = 11
+
 
     def fits(self, subm: np.ndarray) -> bool:
         return (subm == 1).all()
@@ -59,7 +61,66 @@ class MILPsolver():
                     return False, 0
                 
         return True, count
+    
 
+
+    def isPossibeShift_variable_length(self, m, fs, t, seq):
+
+        fitness = 0
+        time = t
+        for fh, obw in enumerate(seq):
+
+            startFreq = self.baseFreq + fs + obw * self.freqGranularity
+            endFreq = startFreq + self.freqGranularity
+
+            # header
+            if fh < self.numHeaders:
+                endTime = time + self.header_slots
+                header = m[time : endTime, startFreq : endFreq]
+
+                if self.fits(header):
+                    fitness += 1
+                    time = endTime
+                else:
+                    return False, 0
+        
+            # fragment
+            else:
+                endTime = time + self.timeGranularity
+                fragment = m[time : endTime, startFreq : endFreq]
+
+                if self.fits(fragment):
+                    fitness += 1
+                    time = endTime
+                else:
+                    if fitness >= self.min_seqlength:
+                        return True, fitness
+
+                    return False, 0
+                
+        return True, fitness
+
+
+    def create_Tp_variable_length(self, m, seqs):
+        
+        Tp = []
+        for t in range(self.simTime - self.max_packet_duration):
+            for s, seq in enumerate(seqs):
+
+                possibleShift = []
+                for fs in range(-self.maxDopplerSlots, self.maxDopplerSlots, 1):
+
+                    fits, fitness = self.isPossibeShift_variable_length(m, fs, t, seq)
+                    if fits:
+                        possibleShift.append(fs)
+                        break # select first possible shift fs that fits seq s at time t
+
+                if len(possibleShift) > 0:
+                    Tp.append((t, s))
+                    #Tp.append((t, s, fitness))
+        
+        return Tp
+    
 
     def create_T(self, m, seqs):
         
@@ -118,10 +179,6 @@ class MILPsolver():
             while i < num_seq:
                 sub_Tvars_m = Tvars_m[t][i : i + seq_length_range]
 
-                #if t==4779:
-                #    if i/23==155.0 or i/23==206.0:
-                #        print(i/23, Tvars_m[t][i : i + seq_length_range])
-
                 j = 0
                 while j < seq_length_range and sub_Tvars_m[j] == 1:
                     Tvars_m[t][i + j] = 0
@@ -162,7 +219,7 @@ class MILPsolver():
             Tvars_m, slots, shifts = self.create_T(m, seqs)
 
             # filter by sequence length
-            #Tvars_m = filter_T(Tvars_m, len(seqs))
+            #Tvars_m = self.filter_T(Tvars_m, len(seqs))
 
             # variable: create T_{t,s}
             Tvars = {}
@@ -236,4 +293,6 @@ class MILPsolver():
         header = 'TP,FP,FN,len(T),len(T\'),dup(T),dup(T\'),time[s]\n'
         string = '{},{},{},{},{},{},{},{:.2f}'.format(tp, fp, fn, len(Tt), len(Tp), len(Tt) - len(Tt_set), len(Tp) - len(Tp_set), solve_time)
         print(header+string)
+
+        return tp, fp, fn
     
