@@ -85,6 +85,10 @@ def get_simdata(v):
     avg_decoded_hdr = 0
     avg_decodable_pld = 0
     avg_collided_hdr_pld = 0
+    avg_tp = 0
+    avg_fp = 0
+    avg_fn = 0
+    avg_diff1 = 0
     for r in range(runs):
         random.seed(2*r)
 
@@ -97,11 +101,15 @@ def get_simdata(v):
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
         tp, fp, fn, diff1 = network.milp_solve()
+        avg_tp += tp
+        avg_fp += fp
+        avg_fn += fn
+        avg_diff1 += diff1 
         network.restart()
 
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
          avg_decoded_hrd_pld / runs, avg_decoded_hdr / runs, avg_decodable_pld / runs,
-         avg_collided_hdr_pld / runs, tp / runs, fp / runs, fn / runs, diff1 / runs]
+         avg_collided_hdr_pld / runs, avg_tp / runs, avg_fp / runs, avg_fn / runs, avg_diff1 / runs]
 
     print(f"{numNodes}", x)
     return x
