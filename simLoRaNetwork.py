@@ -118,10 +118,15 @@ if __name__ == "__main__":
     netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
     #netSizes = [200]#, 1000, 2000, 5000, 10000]
 
-    pool = Pool(processes = 20)
-    result = pool.map(get_simdata, netSizes)
-    pool.close()
-    pool.join()
+    #pool = Pool(processes = 20)
+    #result = pool.map(get_simdata, netSizes)
+    #pool.close()
+    #pool.join()
+
+    result = []
+    for nodes in netSizes:
+        result.append(get_simdata(nodes))
+
 
     basestr = 'nodrop-cr1-1000p-'
 
