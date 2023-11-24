@@ -2,7 +2,7 @@ import gurobipy as gp
 from gurobipy import GRB
 from gurobipy import quicksum
 import numpy as np
-
+from multiprocessing import Pool
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -101,7 +101,9 @@ class MILPsolver():
         return True, fitness
 
 
-    def create_Tp_variable_length(self, m, seqs):
+    def create_Tp_variable_length(self, input):
+
+        m, seqs, shift = input
         
         Tp = []
         for t in range(self.simTime - self.max_packet_duration):
@@ -116,11 +118,34 @@ class MILPsolver():
                         break # select first possible shift fs that fits seq s at time t
 
                 if len(possibleShift) > 0:
-                    Tp.append((t, s))
-                    #Tp.append((t, s, fitness))
+                    #Tp.append((t, s+shift))
+                    Tp.append((t, s+shift, fitness))
         
         return Tp
     
+
+    def create_Tp_variable_length_parallel(self, m, seqs):
+
+        _input = []
+        subseq = int(len(seqs) / 16)
+        i = 0
+        k = 0
+        while i < len(seqs):
+            _input.append([m, seqs[i:i+subseq], k*subseq])
+            i += subseq
+            k += 1
+
+        pool = Pool(processes = 16)
+        result = pool.map(self.create_Tp_variable_length, _input)
+        pool.close()
+        pool.join()
+
+        Tp = []
+        for tp in result:
+            Tp += tp
+
+        return Tp
+
 
     def create_T(self, m, seqs):
         
@@ -271,9 +296,11 @@ class MILPsolver():
 
     def print_metrics(self, Tt, Tp, solve_time):
 
-        tp = 0 # (s, t, p) in T     and  in T'
-        fp = 0 # (s, t, p) not in T but  in T'
-        fn = 0 # (s, t, p) in T     but  not in T'
+        tp = 0 # (t,s,l) in T     and  in T'
+        fp = 0 # (t,s,l) not in T but  in T'
+        fn = 0 # (t,s,l) in T     but  not in T'
+
+        fplist = []
         
         for t in Tt:
             if t in Tp:
@@ -281,17 +308,24 @@ class MILPsolver():
                 # print('TP:', t)
             else:
                 fn += 1
-                # print('FN:', t)
+                print('FN:', t)
         for t in Tp:
             if t not in Tt:
                 fp += 1
-                # print('FP:', t)
+                fplist.append(list(t))
+                #print('FP:', t)
 
-        Tt_set = set(Tt)
-        Tp_set = set(Tp)
+        fplist[fplist[:, 0].argsort()]
+        for t in fplist:
+            print('FP:', t)
 
-        header = 'TP,FP,FN,len(T),len(T\'),dup(T),dup(T\'),time[s]\n'
-        string = '{},{},{},{},{},{},{},{:.2f}'.format(tp, fp, fn, len(Tt), len(Tp), len(Tt) - len(Tt_set), len(Tp) - len(Tp_set), solve_time)
+        #Tt_set = set(Tt)
+        #Tp_set = set(Tp)
+
+        #header = 'TP,FP,FN,len(T),len(T\'),dup(T),dup(T\'),time[s]\n'
+        header = 'TP,FP,FN,len(T),len(T\'),time[s]\n'
+        #string = '{},{},{},{},{},{},{},{:.2f}'.format(tp, fp, fn, len(Tt), len(Tp), len(Tt) - len(Tt_set), len(Tp) - len(Tp_set), solve_time)
+        string = '{},{},{},{},{},{:.2f}'.format(tp, fp, fn, len(Tt), len(Tp), solve_time)
         print(header+string)
 
         return tp, fp, fn

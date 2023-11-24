@@ -231,8 +231,8 @@ class LoRaNetwork():
         for tx in transmissions:
             t = tx.startSlot
             s = tx.seqid
-            Tt.append((t, s))
-            #Tt.append((t, s, len(tx.sequence)))
+            #Tt.append((t, s))
+            Tt.append((t, s, len(tx.sequence)))
             #print(f"time = {t}    seq = {s}    shift = {tx.dopplerShift//70}")
         
         collision_matrix = self.get_collision_matrix(transmissions)
@@ -249,7 +249,8 @@ class LoRaNetwork():
         start_time = time.process_time()
         #Tp = milpsolver.solve_by_milp(m, seqs)
         #Tp = milpsolver.create_Tp(m, seqs)
-        Tp = milpsolver.create_Tp_variable_length(m, seqs)
+        #Tp = milpsolver.create_Tp_variable_length([m, seqs, 0])
+        Tp = milpsolver.create_Tp_variable_length_parallel(m, seqs)
 
         solve_time = time.process_time() - start_time
         return milpsolver.print_metrics(Tt, Tp, solve_time)

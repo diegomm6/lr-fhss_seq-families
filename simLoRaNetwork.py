@@ -20,7 +20,7 @@ def get_decoded_m():
     use_earlydrop = True
     use_headerdrop = False
     familyname = "driver"
-    numNodes = 250
+    numNodes = 800
 
     random.seed(0)
 
@@ -42,7 +42,7 @@ def get_decoded_m():
     tmax =  round(tslots* 102.4/timeGranularity / 1000)
     fmax = round(fslots * 488.28125/freqGranularity / 1000)
 
-    network.milp_solve()
+    tp, fp, fn = network.milp_solve()
     return
 
     fig = plt.figure(figsize=(18,12))
@@ -109,6 +109,10 @@ def get_simdata(v):
 
 if __name__ == "__main__":
 
+    get_decoded_m()
+
+
+    """
     print('driver\tCR = 1\tprocessors = 1000\tearly d/d = YES\thdr drop = NO')
 
     netSizes = np.logspace(2.0, 3.0, num=15) # np.logspace(1.0, 4.0, num=50)
@@ -135,4 +139,4 @@ if __name__ == "__main__":
     print(basestr+'tp,', [round(i[7],6) for i in result])
     print(basestr+'fp,', [round(i[8],6) for i in result])
     print(basestr+'fn,', [round(i[9],6) for i in result])
-    
+    """
