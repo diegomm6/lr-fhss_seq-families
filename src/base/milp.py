@@ -301,6 +301,7 @@ class MILPsolver():
         fn = 0 # (t,s,l) in T     but  not in T'
 
         fplist = []
+        almost = []
         
         for t in Tt:
             if t in Tp:
@@ -308,25 +309,49 @@ class MILPsolver():
                 # print('TP:', t)
             else:
                 fn += 1
-                print('FN:', t)
+                # print('FN:', t)
         for t in Tp:
+            time,s,l = t
             if t not in Tt:
                 fp += 1
-                fplist.append(list(t))
+                #fplist.append(list(t))
                 #print('FP:', t)
 
-        fplist[fplist[:, 0].argsort()]
-        for t in fplist:
-            print('FP:', t)
+        #fplist = np.array(fplist)
+        #fplist = fplist[fplist[:, 0].argsort()]
+        #for t in fplist:
+        #    print('FP:', tuple(t))
 
         #Tt_set = set(Tt)
         #Tp_set = set(Tp)
+
+        #print('diff1', self.metric_processing(Tt, Tp))
 
         #header = 'TP,FP,FN,len(T),len(T\'),dup(T),dup(T\'),time[s]\n'
         header = 'TP,FP,FN,len(T),len(T\'),time[s]\n'
         #string = '{},{},{},{},{},{},{},{:.2f}'.format(tp, fp, fn, len(Tt), len(Tp), len(Tt) - len(Tt_set), len(Tp) - len(Tp_set), solve_time)
         string = '{},{},{},{},{},{:.2f}'.format(tp, fp, fn, len(Tt), len(Tp), solve_time)
-        print(header+string)
+        #print(header+string)
 
-        return tp, fp, fn
+        return tp, fp, fn, self.metric_processing(Tt, Tp)
+    
+
+    def metric_processing(self, Tt, Tp):
+
+        Tt_nolength = [[t,s] for t,s,l in Tt]
+        Tp_nolength = [[t,s] for t,s,l in Tp]
+        
+        Tt_lengths = [l for t,s,l in Tt]
+        Tp_lengths = [l for t,s,l in Tp]
+
+        diff1 = 0
+        i=0
+        for tt in Tt_nolength:
+            if tt in Tp_nolength:
+                _id = Tp_nolength.index(tt)
+                if Tt_lengths[i] == Tp_lengths[_id]-1:
+                    diff1 += 1
+            i+=1
+
+        return diff1
     

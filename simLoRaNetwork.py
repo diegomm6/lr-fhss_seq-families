@@ -58,7 +58,7 @@ def get_decoded_m():
 
 def get_simdata(v):
 
-    runs = 1
+    runs = 10
     simTime = 500
     numOCW = 1
     numOBW = 280
@@ -96,12 +96,12 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
-        tp, fp, fn = network.milp_solve()
+        tp, fp, fn, diff1 = network.milp_solve()
         network.restart()
 
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
          avg_decoded_hrd_pld / runs, avg_decoded_hdr / runs, avg_decodable_pld / runs,
-         avg_collided_hdr_pld / runs, tp, fp, fn]
+         avg_collided_hdr_pld / runs, tp / runs, fp / runs, fn / runs, diff1 / runs]
 
     print(f"{numNodes}", x)
     return x
@@ -109,16 +109,16 @@ def get_simdata(v):
 
 if __name__ == "__main__":
 
-    get_decoded_m()
+    #get_decoded_m()
 
 
-    """
+    
     print('driver\tCR = 1\tprocessors = 1000\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(2.0, 3.0, num=15) # np.logspace(1.0, 4.0, num=50)
+    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
     #netSizes = [200]#, 1000, 2000, 5000, 10000]
 
-    pool = Pool(processes = 15)
+    pool = Pool(processes = 20)
     result = pool.map(get_simdata, netSizes)
     pool.close()
     pool.join()
@@ -139,4 +139,5 @@ if __name__ == "__main__":
     print(basestr+'tp,', [round(i[7],6) for i in result])
     print(basestr+'fp,', [round(i[8],6) for i in result])
     print(basestr+'fn,', [round(i[9],6) for i in result])
-    """
+    print(basestr+'diff1,', [round(i[10],6) for i in result])
+    
