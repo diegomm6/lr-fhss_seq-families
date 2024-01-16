@@ -223,7 +223,7 @@ class LoRaNetwork():
 
         extendedFamily = []
         for fhs in self.FHSfam.FHSfam:
-            extendedFamily.append(fhs[:33])
+            extendedFamily.append(fhs[:33]) # CHANGE HERE FOR DIFFERENT CR 
 
         Tt = []
         transmissions = self.get_transmissions()

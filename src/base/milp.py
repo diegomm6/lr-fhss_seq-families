@@ -22,7 +22,7 @@ class MILPsolver():
         self.maxDopplerSlots = round(20000 / freqPerSlot)
         self.baseFreq = round(maxShift / freqPerSlot)
 
-        self.min_seqlength = 11
+        self.min_seqlength = 11 # CHANGE HERE FOR DIFFERENT CR
 
 
     def fits(self, subm: np.ndarray) -> bool:
@@ -309,18 +309,18 @@ class MILPsolver():
                 # print('TP:', t)
             else:
                 fn += 1
-                # print('FN:', t)
+                print('FN:', t)
         for t in Tp:
             time,s,l = t
             if t not in Tt:
                 fp += 1
-                #fplist.append(list(t))
+                fplist.append(list(t))
                 #print('FP:', t)
 
-        #fplist = np.array(fplist)
-        #fplist = fplist[fplist[:, 0].argsort()]
-        #for t in fplist:
-        #    print('FP:', tuple(t))
+        fplist = np.array(fplist)
+        fplist = fplist[fplist[:, 0].argsort()]
+        for t in fplist:
+            print('FP:', tuple(t))
 
         #Tt_set = set(Tt)
         #Tp_set = set(Tp)
