@@ -9,7 +9,7 @@ from src.base.LoRaTransmission import LoRaTransmission
 from src.families.LiFanMethod import LiFanFamily
 from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
 from src.families.LempelGreenbergMethod import LempelGreenbergFamily
-from src.base.milp import MILPsolver
+from src.base.FHSLocator import FHSLocator
 
 
 class LoRaNetwork():
@@ -19,20 +19,44 @@ class LoRaNetwork():
         
         self.numOCW = numOCW
         self.numOBW = numOBW
-        self.timeGranularity = timeGranularity
-        self.freqGranularity = freqGranularity
-        self.header_slots = round(timeGranularity * 233.472 / 102.4)
         self.simTime = simTime
+        self.timeGranularity = timeGranularity # time slots per fragmet
+        self.freqGranularity = freqGranularity # freq slots per OBW
         self.use_earlydecode = use_earlydecode
         self.FHSfam = self.set_FHSfamily(familyname, numGrids)
 
-        assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
+        ###########################
+        # GLOBAL LR-FHSS PARAMETERS
+        ###########################
 
+        CFO = 0 # carrier frequency offset
+        OBWchannelBW = 488.28125 # OBW bandwidth in Hz
+        OCWchannelTXBW = 137000  # OCW transmitter bandwidth in Hz
+        OCWchannelRXBW = 200000  # OCW receiver bandwidth in Hz
+        headerTime = 0.233472    # seconds
+        fragmentTime = 0.1024    # seconds
+
+        self.headerSlots = round(timeGranularity * headerTime / fragmentTime)
+        self.freqPerSlot = OBWchannelBW / self.freqGranularity
+        self.frequencySlots = int(round(OCWchannelRXBW / self.freqPerSlot))
+
+        assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
         self.numHeaders = 3 # CR == 1
         if CR == 2:
             self.numHeaders = 2
+        
+        self.header = np.ones((freqGranularity, self.headerSlots))  # header block
+        self.fragment = np.ones((freqGranularity, timeGranularity)) # fragment block
 
-        max_packet_duration = 31 * timeGranularity + 3 * self.header_slots
+        maxDopplerShift = (OCWchannelRXBW - OCWchannelTXBW) / 2
+        self.maxFreqShift = CFO + maxDopplerShift
+        self.baseFreq = round(self.maxFreqShift / self.freqPerSlot) # freq offset to center TX window over RX window
+
+        ###########################
+        # INTIALIZE NETWORK MODULES
+        ###########################
+
+        max_packet_duration = 31 * timeGranularity + 3 * self.headerSlots
         startLimit = simTime - max_packet_duration
         self.nodes = [LoRaNode(i, CR, numOCW, startLimit) for i in range(numNodes)]
 
@@ -40,10 +64,11 @@ class LoRaNetwork():
         self.gateway = LoRaGateway(CR, timeGranularity, freqGranularity, use_earlydrop, 
                                    use_earlydecode, use_headerdrop, numDecoders)
         
-        self.header = np.ones((freqGranularity, self.header_slots))
-        self.fragment = np.ones((freqGranularity, timeGranularity))
+        self.fhsLocator = FHSLocator(self.simTime, self.numHeaders, self.timeGranularity, self.freqGranularity,
+                                     self.freqPerSlot, headerTime, fragmentTime, self.headerSlots,
+                                     max_packet_duration, self.maxFreqShift)
 
-    
+
     def set_FHSfamily(self, familyname, numGrids):
 
         if familyname == "lemgreen":
@@ -78,32 +103,65 @@ class LoRaNetwork():
 
         return sorted_txs
     
+    ####################################
+    # TIME-FREQ MATRIX GENERATOR METHODS
+    ####################################
 
-    def get_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
-
-        carrierOffset = 0
-        maxDopplerShift = (200000 - 137000) / 2 # 20000
-        maxShift = carrierOffset + maxDopplerShift
-
-        freqPerSlot = 488.28125 / self.freqGranularity
-        frequencySlots = int(self.numOBW * self.freqGranularity + 2 * maxShift / freqPerSlot)
-
-        collision_matrix = np.zeros((self.numOCW, frequencySlots, self.simTime))
+    def get_staticdoppler_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
+        """
+        Create receiver matrix from given transmissions set
+        Fixed Static doppler shift FOR ALL header/fragment is considered
+        Received matrix is based on tranmission count
+        """
+        collision_matrix = np.zeros((self.numOCW, self.frequencySlots, self.simTime))
         
         tx : LoRaTransmission
         for tx in transmissions:
 
-            baseFreq = round(maxShift / freqPerSlot) + round(tx.dopplerShift / freqPerSlot)
+            staticShift = self.baseFreq + round(tx.dopplerShift[0] / self.freqPerSlot)
 
             time = tx.startSlot
             for fh, obw in enumerate(tx.sequence):
 
-                startFreq = baseFreq + obw * self.freqGranularity
+                startFreq = staticShift + obw * self.freqGranularity
                 endFreq = startFreq + self.freqGranularity
 
                 # write header
                 if fh < tx.numHeaders:
-                    endTime = time + self.header_slots
+                    endTime = time + self.headerSlots
+                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.header
+
+                # write fragment
+                else:
+                    endTime = time + self.timeGranularity
+                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.fragment
+                
+                time = endTime
+
+        return collision_matrix
+    
+
+    def get_dynamicdoppler_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
+        """
+        Create receiver matrix from given transmissions set
+        Variable Static doppler shift PER header/fragment is considered
+        Received matrix is based on tranmission count
+        """
+
+        collision_matrix = np.zeros((self.numOCW, self.frequencySlots, self.simTime))
+
+        # static doppler per header / fragment
+        for tx in transmissions:
+
+            time = tx.startSlot
+            for fh, obw in enumerate(tx.sequence):
+
+                startFreq = self.baseFreq + obw * self.freqGranularity + round(tx.dopplerShift[fh] / self.freqPerSlot)
+                endFreq = startFreq + self.freqGranularity
+
+                # write header
+                if fh < tx.numHeaders:
+                    endTime = time + self.headerSlots
                     collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.header
 
                 # write fragment
@@ -117,31 +175,27 @@ class LoRaNetwork():
     
 
     def get_decoded_matrix(self, binary : bool) -> np.ndarray:
+        """
+        Create decode matrix from decoded transmissions set
+        """
 
-        carrierOffset = 0
-        maxDopplerShift = (200000 - 137000) / 2 # 20000
-        maxShift = carrierOffset + maxDopplerShift
-
-        freqPerSlot = 488.28125 / self.freqGranularity
-        frequencySlots = int(self.numOBW * self.freqGranularity + 2 * maxShift / freqPerSlot)
-
-        decoded_matrix = np.zeros((self.numOCW, frequencySlots, self.simTime))
+        decoded_matrix = np.zeros((self.numOCW, self.frequencySlots, self.simTime))
 
         decoded = self.gateway.get_decoded()
         tx : LoRaTransmission
         for tx, pld_status in decoded:
 
-            baseFreq = round(maxShift / freqPerSlot) + round(tx.dopplerShift / freqPerSlot)
+            staticShift = self.baseFreq + round(tx.dopplerShift[0] / self.freqPerSlot)
 
             time = tx.startSlot
             for fh, obw in enumerate(tx.sequence):
 
-                startFreq = baseFreq + obw * self.freqGranularity
+                startFreq = staticShift + obw * self.freqGranularity
                 endFreq = startFreq + self.freqGranularity
 
                 # write header
                 if fh < tx.numHeaders:
-                    endTime = time + self.header_slots
+                    endTime = time + self.headerSlots
                     decoded_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.header
 
                 # write fragment
@@ -156,6 +210,49 @@ class LoRaNetwork():
 
         return decoded_matrix
     
+
+    ##################################
+    # FHS SEARCH FOR HEADERLESS DECODE
+    ##################################
+            
+    def generate_extended_m(self):
+
+        seq_length_range = 23  # max length(seqs) - min length(seqs) +1 over "y" axis
+
+        # extend FHS set to include all subsequences
+        extendedFamily = []
+        for fhs in self.FHSfam.FHSfam:
+            extendedFamily.append(fhs[:33]) # CHANGE HERE FOR DIFFERENT CR 
+
+        # create tx list in the form (time, seqid, seqlength)
+        transmissions = self.get_transmissions()
+        Tt = []
+        tx : LoRaTransmission
+        for tx in transmissions:
+            Tt.append((tx.startSlot, tx.seqid, len(tx.sequence)))
+        
+        # create binary received matrix
+        collision_matrix = self.get_dynamicdoppler_collision_matrix(transmissions)
+        collision_matrix[collision_matrix > 1] = 1 # binary recv matrix
+
+        return extendedFamily, Tt, collision_matrix[0].T
+    
+
+    def exhaustive_search(self):
+
+        FHSset, Tt, RXbinary_matrix = self.generate_extended_m()
+        self.fhsLocator.set_RXmatrix(RXbinary_matrix)
+
+        start_time = time.process_time()
+        Tp = self.fhsLocator.create_Tp_parallel(FHSset)
+        solve_time = time.process_time() - start_time
+
+        return self.fhsLocator.print_metrics(Tt, Tp, solve_time)
+    
+
+    ########################
+    # DATA GATHERING METHODS
+    ########################
 
     def get_tracked_txs(self) -> int:
         return self.gateway.get_tracked_txs()
@@ -177,7 +274,6 @@ class LoRaNetwork():
     
     def get_collided_hdr_pld(self) -> int:
         return self.gateway.get_collided_hdr_pld()
-    
 
     def get_sent_packets(self) -> int:
         sent_packets = 0
@@ -186,7 +282,6 @@ class LoRaNetwork():
             sent_packets += node.sent_packets
 
         return sent_packets
-    
 
     def get_sent_bytes(self) -> int:
         sent_bytes = 0
@@ -196,17 +291,10 @@ class LoRaNetwork():
 
         return sent_bytes
 
-
     def run(self) -> None:
         transmissions = self.get_transmissions()
-        collision_matrix = self.get_collision_matrix(transmissions)
-
+        collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
         self.gateway.run(transmissions, collision_matrix)
-
-    
-    def get_m(self):
-        return self.get_collision_matrix(self.get_transmissions())
-    
 
     def restart(self) -> None:
 
@@ -215,42 +303,3 @@ class LoRaNetwork():
         node : LoRaNode
         for node in self.nodes:
             node.restart()
-    
-
-    def generate_extended_m(self):
-
-        seq_length_range = 23  # max length(seqs) - min length(seqs) +1 over "y" axis
-
-        extendedFamily = []
-        for fhs in self.FHSfam.FHSfam:
-            extendedFamily.append(fhs[:33]) # CHANGE HERE FOR DIFFERENT CR 
-
-        Tt = []
-        transmissions = self.get_transmissions()
-        tx : LoRaTransmission
-        for tx in transmissions:
-            t = tx.startSlot
-            s = tx.seqid
-            #Tt.append((t, s))
-            Tt.append((t, s, len(tx.sequence)))
-            #print(f"time = {t}    seq = {s}    shift = {tx.dopplerShift//70}")
-        
-        collision_matrix = self.get_collision_matrix(transmissions)
-        collision_matrix[collision_matrix > 1] = 1
-
-        return extendedFamily, Tt, collision_matrix[0].T
-    
-
-    def milp_solve(self):
-
-        seqs, Tt, m = self.generate_extended_m()
-        milpsolver = MILPsolver(self.simTime, self.numHeaders, self.timeGranularity, self.freqGranularity)
-
-        start_time = time.process_time()
-        #Tp = milpsolver.solve_by_milp(m, seqs)
-        #Tp = milpsolver.create_Tp(m, seqs)
-        #Tp = milpsolver.create_Tp_variable_length([m, seqs, 0])
-        Tp = milpsolver.create_Tp_variable_length_parallel(m, seqs)
-
-        solve_time = time.process_time() - start_time
-        return milpsolver.print_metrics(Tt, Tp, solve_time)

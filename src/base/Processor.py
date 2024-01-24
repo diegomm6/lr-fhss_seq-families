@@ -4,7 +4,7 @@ from src.base.LoRaTransmission import LoRaTransmission
 
 class Processor():
     """
-    A class for decoding LoRa transmissions.
+    A class for decoding LoRa transmissions. Processor / Demodulator
 
     Args:
         granularity (int): The granularity of the decoding process, in slots.
@@ -101,7 +101,7 @@ class Processor():
         freqPerSlot= 488.28125 / self.freqGranularity
 
         time = tx.startSlot
-        baseFreq = round(maxShift / freqPerSlot) + round(tx.dopplerShift / freqPerSlot)
+        baseFreq = round(maxShift / freqPerSlot) + round(tx.dopplerShift[0] / freqPerSlot)
 
         maxFrgCollisions = tx.numFragments - self.get_minfragments(tx.numFragments)
 

@@ -13,14 +13,14 @@ def get_decoded_m():
     numOBW = 280
     numGrids = 8
     timeGranularity = 6
-    freqGranularity = 7
-    numDecoders = 1000
+    freqGranularity = 25
+    numDecoders = 100
     CR = 1
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
     familyname = "driver"
-    numNodes = 800
+    numNodes = 150
 
     random.seed(0)
 
@@ -42,13 +42,16 @@ def get_decoded_m():
     tmax =  round(tslots* 102.4/timeGranularity / 1000)
     fmax = round(fslots * 488.28125/freqGranularity / 1000)
 
-    tp, fp, fn = network.milp_solve()
-    return
+    #tp, fp, fn = network.milp_solve()
+    #return
+
+
+    staticdoppler_matrix = network.get_staticdoppler_collision_matrix(transmissions)
 
     fig = plt.figure(figsize=(18,12))
-    im = plt.imshow(diff[0], extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
+    im = plt.imshow(staticdoppler_matrix[0], extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
     fig.colorbar(im)
-    plt.title('diff m using 1 OCW channel')
+    plt.title('collision_matrix using 1 OCW channel')
     plt.xlabel('s')
     plt.ylabel('kHz')
     plt.show()
@@ -64,8 +67,8 @@ def get_simdata(v):
     numOBW = 280
     numGrids = 8
     timeGranularity = 6
-    freqGranularity = 7
-    numDecoders = 1000
+    freqGranularity = 25
+    numDecoders = 500
     CR = 1
     use_earlydecode = True
     use_earlydrop = True
@@ -100,7 +103,7 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
-        tp, fp, fn, diff1 = network.milp_solve()
+        tp, fp, fn, diff1 = network.exhaustive_search()
         avg_tp += tp
         avg_fp += fp
         avg_fn += fn
@@ -119,11 +122,9 @@ if __name__ == "__main__":
 
     #get_decoded_m()
 
+    print('driver\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
-    
-    print('driver\tCR = 1\tprocessors = 1000\tearly d/d = YES\thdr drop = NO')
-
-    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
+    #netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
     netSizes = [500]#, 1000, 2000, 5000, 10000]
 
     #pool = Pool(processes = 20)
@@ -135,8 +136,8 @@ if __name__ == "__main__":
     for nodes in netSizes:
         result.append(get_simdata(nodes))
 
-
-    basestr = 'nodrop-cr1-1000p-'
+    
+    basestr = 'nodrop-cr1-500p-'
 
     #with open('path/to/csv_file', 'w') as f:
     #    writer = csv.writer(f)

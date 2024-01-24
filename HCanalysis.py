@@ -23,11 +23,34 @@ def c():
 
 
 
+def max_coincidence():
 
+    driverFHSfam = LR_FHSS_DriverFamily(35, "EU137")        # EU137 ; EU336 ; (US)
+    fhsfam = driverFHSfam.FHSfam
+
+    max_matches = 0
+    for i in range(len(fhsfam)):
+
+        for j in range(i+1, len(fhsfam)):
+
+            current_max_match = 0
+
+            k=0
+            while fhsfam[i][k] == fhsfam[j][k]:
+                current_max_match += 1
+                k+=1
+
+            if current_max_match > max_matches:
+                max_matches = current_max_match
+
+        return max_matches
 
 
 if __name__ == "__main__":
 
+    print(max_coincidence())
+
+    """
     lifan_HCdata = []
     driver_HCdata = []
     seq_lengths = [2*q for q in range(1,31)]                   # 2,36  ; 1,44  ; 1,31
@@ -48,7 +71,6 @@ if __name__ == "__main__":
     print(f"driver : {driver_HCdata}")
     print(f"\nlifan : {lifan_HCdata}")
 
-    """
     plt.figure(figsize=(8,8))
     plt.plot(seq_lengths, driver_HCdata, label='driver')
     plt.plot(seq_lengths, lifan_HCdata, label='lifan')

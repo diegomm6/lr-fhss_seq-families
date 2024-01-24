@@ -302,14 +302,17 @@ class MILPsolver():
 
         fplist = []
         almost = []
+
+        #for t in Tt:
+        #    print('True seq:', t)
         
         for t in Tt:
             if t in Tp:
                 tp += 1
-                # print('TP:', t)
+                #print('TP:', t)
             else:
                 fn += 1
-                print('FN:', t)
+                #print('FN:', t)
         for t in Tp:
             time,s,l = t
             if t not in Tt:
@@ -319,8 +322,8 @@ class MILPsolver():
 
         fplist = np.array(fplist)
         fplist = fplist[fplist[:, 0].argsort()]
-        for t in fplist:
-            print('FP:', tuple(t))
+        #for t in fplist:
+            #print('FP:', tuple(t))
 
         #Tt_set = set(Tt)
         #Tp_set = set(Tp)
@@ -333,7 +336,7 @@ class MILPsolver():
         string = '{},{},{},{},{},{:.2f}'.format(tp, fp, fn, len(Tt), len(Tp), solve_time)
         #print(header+string)
 
-        return tp, fp, fn, self.metric_processing(Tt, Tp)
+        return tp, fp, fn, self.metric_processing2(Tt, Tp)
     
 
     def metric_processing(self, Tt, Tp):
@@ -355,3 +358,14 @@ class MILPsolver():
 
         return diff1
     
+    def metric_processing2(self, Tt, Tp):
+
+        Tt_nolength = [[t,s] for t,s,l in Tt]
+        Tp_nolength = [[t,s] for t,s,l in Tp]
+        
+        lengthmismatch = 0
+        for tt in Tt_nolength:
+            if tt in Tp_nolength:
+                lengthmismatch += 1
+
+        return lengthmismatch

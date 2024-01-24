@@ -1,5 +1,6 @@
 import random
-from src.base.base import get_randomDoppler
+import numpy as np
+from src.base.base import get_randomDoppler, dopplerShift
 from src.base.LoRaTransmission import LoRaTransmission
 from src.families.LR_FHSS_DriverMethod import FHSfamily
 
@@ -40,6 +41,9 @@ class LoRaNode():
         self.sent_packets = 0
         self.sent_payload_bytes = 0
 
+        self.headertime = 0.233472
+        self.fragmenttime = 0.1024
+
 
     def restart(self) -> None:
         self.sent_packets = 0
@@ -58,7 +62,24 @@ class LoRaNode():
         nb_hops_out = ( length_bits + 47 ) // 48  # can be just ceil(bits/48)
 
         return nb_hops_out
+    
 
+    def calculate_hdr_frg_times(self, time, numHeaders, numFragments) -> list[float]:
+
+        hdr_frg_times = []
+
+        # doppler shift decreases as the satellites moves as seeen from the nodes
+
+        for hdr in range(numHeaders):
+            hdr_frg_times.append(time)
+            time -= self.headertime
+
+        for frg in range(numFragments):
+            hdr_frg_times.append(time)
+            time -= self.fragmenttime
+
+        return hdr_frg_times
+    
 
     def get_transmissions(self, family: FHSfamily) -> list[LoRaTransmission]:
         """
@@ -81,7 +102,7 @@ class LoRaNode():
         else:
             raise Exception(f"Invalid coding rate '{self.CR}'") 
 
-        numFragments = self.numHops(payload_size)
+        numFragments = int(self.numHops(payload_size))
         seq_length = int(numFragments + numHeaders)
 
         seqid, sequence = family.get_random_sequence()
@@ -90,9 +111,26 @@ class LoRaNode():
         self.sent_packets += 1
         self.sent_payload_bytes += payload_size
 
-        dopplerShift = get_randomDoppler()
 
-        tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders,
-                              payload_size, numFragments, sequence, seqid, dopplerShift)
+        g = 9.80665    # m/s2
+        R = 6371000    # m
+        H = 600000     # m,  satellite altitude
+        minRange = H
+        maxRange = 1500000 # max range
+
+        d = random.uniform(minRange, maxRange)           # slant distance
+        E = np.arcsin( (H**2 + 2*H*R - d**2) / (2*d*R) ) # elevation angle
+        dg = R * np.arcsin( d*np.cos(E) / (R+H) )        # ground range
+        v = np.sqrt( g*R / (1 + H/R) )                   # satellite velocity
+        tau = dg / v                                     # half satellite visibility time
+        
+        maxFrameTime = 3.8
+        time = np.random.uniform(-tau+maxFrameTime, tau-maxFrameTime)
+
+        hdr_frg_times = self.calculate_hdr_frg_times(time, numHeaders, numFragments)
+        staticDoppler = [dopplerShift(t) for t in hdr_frg_times]
+
+        tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders, payload_size,
+                              numFragments, sequence, seqid, d, staticDoppler, power=0)
 
         return [tx]
