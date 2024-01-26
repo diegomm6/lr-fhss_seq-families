@@ -154,10 +154,10 @@ class FHSLocator():
         for t in Tt:
             if t in Tp:
                 tp += 1
-                #print('TP:', t)
+                print('TP:', t)
             else:
                 fn += 1
-                #print('FN:', t)
+                print('FN:', t)
         for t in Tp:
             time,s,l = t
             if t not in Tt:
@@ -165,13 +165,11 @@ class FHSLocator():
                 fplist.append(list(t))
                 #print('FP:', t)
 
-        fplist = np.array(fplist)
-        fplist = fplist[fplist[:, 0].argsort()]
-        #for t in fplist:
-            #print('FP:', tuple(t))
+        if len(fplist):
+            fplist = np.array(fplist)
+            fplist = fplist[fplist[:, 0].argsort()]
+            [print('FP:', tuple(t)) for t in fplist]
 
-        #Tt_set = set(Tt)
-        #Tp_set = set(Tp)
 
         #print('diff1', self.metric_processing(Tt, Tp))
 

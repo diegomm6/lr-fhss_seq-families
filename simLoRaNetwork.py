@@ -20,7 +20,7 @@ def get_decoded_m():
     use_earlydrop = True
     use_headerdrop = False
     familyname = "driver"
-    numNodes = 150
+    numNodes = 50
 
     random.seed(0)
 
@@ -29,24 +29,20 @@ def get_decoded_m():
                           use_headerdrop)
 
     transmissions = network.get_transmissions()
-    collision_matrix = network.get_collision_matrix(transmissions)
-    network.gateway.run(transmissions, collision_matrix)
+    staticdoppler_matrix = network.get_staticdoppler_collision_matrix(transmissions)
+    dynamicdoppler_matrix = network.get_dynamicdoppler_collision_matrix(transmissions)
 
+    network.gateway.run(transmissions, staticdoppler_matrix)
     decoded_m = network.get_decoded_matrix(binary=False)
 
     #collision_matrix[collision_matrix > 1] = 1
 
-    diff = np.subtract(collision_matrix, decoded_m)
+    diff = np.subtract(staticdoppler_matrix, decoded_m)
 
     fslots, tslots = decoded_m[0].shape
     tmax =  round(tslots* 102.4/timeGranularity / 1000)
     fmax = round(fslots * 488.28125/freqGranularity / 1000)
 
-    #tp, fp, fn = network.milp_solve()
-    #return
-
-
-    staticdoppler_matrix = network.get_staticdoppler_collision_matrix(transmissions)
 
     fig = plt.figure(figsize=(18,12))
     im = plt.imshow(staticdoppler_matrix[0], extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
@@ -118,14 +114,12 @@ def get_simdata(v):
     return x
 
 
-if __name__ == "__main__":
-
-    #get_decoded_m()
+def runsim():
 
     print('driver\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
     #netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
-    netSizes = [500]#, 1000, 2000, 5000, 10000]
+    netSizes = [250]#, 1000, 2000, 5000, 10000]
 
     #pool = Pool(processes = 20)
     #result = pool.map(get_simdata, netSizes)
@@ -136,13 +130,7 @@ if __name__ == "__main__":
     for nodes in netSizes:
         result.append(get_simdata(nodes))
 
-    
     basestr = 'nodrop-cr1-500p-'
-
-    #with open('path/to/csv_file', 'w') as f:
-    #    writer = csv.writer(f)
-    #    writer.writerow(row)
-
     print(basestr+'tracked_txs,', [round(i[0],6) for i in result])
     print(basestr+'header_drop_packets,', [round(i[1],6) for i in result])
     print(basestr+'decoded_bytes,', [round(i[2],6) for i in result])
@@ -155,3 +143,8 @@ if __name__ == "__main__":
     print(basestr+'fn,', [round(i[9],6) for i in result])
     print(basestr+'diff1,', [round(i[10],6) for i in result])
     
+
+if __name__ == "__main__":
+
+    get_decoded_m()
+    #runsim()

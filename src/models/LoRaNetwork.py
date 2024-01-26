@@ -103,6 +103,20 @@ class LoRaNetwork():
 
         return sorted_txs
     
+    def run(self) -> None:
+        transmissions = self.get_transmissions()
+        collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
+        self.gateway.run(transmissions, collision_matrix)
+
+    def restart(self) -> None:
+
+        self.gateway.restart()
+
+        node : LoRaNode
+        for node in self.nodes:
+            node.restart()
+
+
     ####################################
     # TIME-FREQ MATRIX GENERATOR METHODS
     ####################################
@@ -222,7 +236,7 @@ class LoRaNetwork():
         # extend FHS set to include all subsequences
         extendedFamily = []
         for fhs in self.FHSfam.FHSfam:
-            extendedFamily.append(fhs[:33]) # CHANGE HERE FOR DIFFERENT CR 
+            extendedFamily.append(fhs[:34]) # CHANGE HERE FOR DIFFERENT CR 
 
         # create tx list in the form (time, seqid, seqlength)
         transmissions = self.get_transmissions()
@@ -290,16 +304,3 @@ class LoRaNetwork():
             sent_bytes += node.sent_payload_bytes
 
         return sent_bytes
-
-    def run(self) -> None:
-        transmissions = self.get_transmissions()
-        collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
-        self.gateway.run(transmissions, collision_matrix)
-
-    def restart(self) -> None:
-
-        self.gateway.restart()
-
-        node : LoRaNode
-        for node in self.nodes:
-            node.restart()
