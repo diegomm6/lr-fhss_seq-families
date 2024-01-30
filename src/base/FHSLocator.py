@@ -88,7 +88,7 @@ class FHSLocator():
                         break # select first possible shift fs that fits seq s at time t
 
                 if len(possibleShift) > 0:
-                    Tp.append((t, s+shift)) #fitness, possibleShift[0]
+                    Tp.append((t, s+shift, fitness, possibleShift[0])) #fitness, possibleShift[0]
         
         return Tp
     
@@ -157,7 +157,7 @@ class FHSLocator():
                 fn += 1
                 #print('FN:', t)
         for t in Tp:
-            time,s = t # time,s,l,ds = t
+            time,s,l,ds = t # time,s,l,ds = t
             if t not in Tt:
                 fp += 1
                 fplist.append(list(t))

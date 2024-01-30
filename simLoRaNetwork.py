@@ -124,8 +124,8 @@ def runsim():
 
     print('driver\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
-    #netSizes = [400]#, 1000, 2000, 5000, 10000]
+    #netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
+    netSizes = [450]#, 1000, 2000, 5000, 10000]
 
     #pool = Pool(processes = 20)
     #result = pool.map(get_simdata, netSizes)

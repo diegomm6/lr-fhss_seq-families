@@ -245,11 +245,11 @@ class LoRaNetwork():
         tx : LoRaTransmission
         for tx in transmissions:
             ds = round(tx.dopplerShift[0] / self.freqPerSlot)
-            Tt.append((tx.startSlot, tx.seqid)) # , len(tx.sequence), ds
+            Tt.append((tx.startSlot, tx.seqid, len(tx.sequence), ds)) # , len(tx.sequence), ds
         
         # create binary received matrix
-        collision_matrix = self.get_dynamicdoppler_collision_matrix(transmissions)
-        #collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
+        #collision_matrix = self.get_dynamicdoppler_collision_matrix(transmissions)
+        collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
         collision_matrix[collision_matrix > 1] = 1 # binary recv matrix
 
         return extendedFamily, Tt, collision_matrix[0]
@@ -276,7 +276,7 @@ class LoRaNetwork():
         Tp = self.fhsLocator.create_Tp_parallel(FHSset)
         solve_time = time.process_time() - start_time
 
-        #self.printknapSack(self.numNodes, Tp, RXbinary_matrix)
+        self.printknapSack(self.numNodes, Tp, RXbinary_matrix)
 
         return self.fhsLocator.print_metrics(Tt, Tp, solve_time)
     
@@ -336,12 +336,12 @@ class LoRaNetwork():
                 
         # Build table K[][] in bottom up manner
         for i in range(numTp + 1):
+            print(i)
             for w in range(numTX + 1):
 
                 if i == 0 or w == 0:
                     K[i][w] = 0
 
-                #elif 1 <= w:
                 else:
                     fitnessWitem, newMp = self.get_ToverM_fitness(boolM, Tp[i-1], matricesOld[w-1])
                     
@@ -352,17 +352,14 @@ class LoRaNetwork():
 
                     else:
                         K[i][w] = K[i - 1][w]
-                        matrix_i0_w0 = matrix_i1_w0
-                #else:
-                #    K[i][w] = K[i - 1][w]
-                #    matricesNew[w] = matricesOld[w]
+                        matricesNew[w] = matricesOld[w]
                         
-  
-
+            matricesOld = matricesNew
             
 
-
         filteredTp_stringlist = selected[numTp][numTX][:-1].split("-")
+
+        print(f'total = {F*T}\tfitness = {K[i][w]}')
         print(len(filteredTp_stringlist))
         #for Tp_id in filteredTp_stringlist:
             #print(Tp[int(Tp_id)])
