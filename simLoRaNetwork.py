@@ -5,6 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from src.models.LoRaNetwork import LoRaNetwork
+from src.base.base import cornerdetect
 
 def get_decoded_m():
 
@@ -20,7 +21,7 @@ def get_decoded_m():
     use_earlydrop = True
     use_headerdrop = False
     familyname = "driver"
-    numNodes = 50
+    numNodes = 500
 
     random.seed(0)
 
@@ -35,9 +36,14 @@ def get_decoded_m():
     network.gateway.run(transmissions, staticdoppler_matrix)
     decoded_m = network.get_decoded_matrix(binary=False)
 
-    #collision_matrix[collision_matrix > 1] = 1
+    # binary
+    staticdoppler_matrix[staticdoppler_matrix > 1] = 1
+    cornerm = cornerdetect(staticdoppler_matrix[0])
+    newm = np.add(staticdoppler_matrix[0], cornerm)
 
-    diff = np.subtract(staticdoppler_matrix, decoded_m)
+
+    # detected / received difference matrix
+    #diff = np.subtract(staticdoppler_matrix, decoded_m)
 
     fslots, tslots = decoded_m[0].shape
     tmax =  round(tslots* 102.4/timeGranularity / 1000)
@@ -45,7 +51,7 @@ def get_decoded_m():
 
 
     fig = plt.figure(figsize=(18,12))
-    im = plt.imshow(staticdoppler_matrix[0], extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
+    im = plt.imshow(newm, extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
     fig.colorbar(im)
     plt.title('collision_matrix using 1 OCW channel')
     plt.xlabel('s')
@@ -99,7 +105,7 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
-        tp, fp, fn, diff1 = network.exhaustive_search()
+        tp, fp, fn, diff1 = network.exhaustive_search_Wfilter()
         avg_tp += tp
         avg_fp += fp
         avg_fn += fn
@@ -118,8 +124,8 @@ def runsim():
 
     print('driver\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
-    #netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
-    netSizes = [250]#, 1000, 2000, 5000, 10000]
+    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
+    #netSizes = [400]#, 1000, 2000, 5000, 10000]
 
     #pool = Pool(processes = 20)
     #result = pool.map(get_simdata, netSizes)
@@ -146,5 +152,5 @@ def runsim():
 
 if __name__ == "__main__":
 
-    get_decoded_m()
-    #runsim()
+    #get_decoded_m()
+    runsim()

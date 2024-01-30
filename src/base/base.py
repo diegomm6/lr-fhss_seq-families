@@ -243,3 +243,22 @@ def get_randomDoppler() -> float:
     t0 = r0 * np.cos(theta0) * Tcov
 
     return dopplerShift(t0)
+
+
+def edgedetect(a):
+
+    copya = np.copy(a)
+    for i in range(1,len(a)):
+        if not( a[i-1]==0 and a[i]==1 ):
+            copya[i] = 0
+
+    return copya
+
+
+def cornerdetect(m):
+
+    xedges = np.apply_along_axis(edgedetect, 0, m)
+    yedges = np.apply_along_axis(edgedetect, 1, m)
+    corners = np.logical_and(xedges, yedges)
+
+    return corners

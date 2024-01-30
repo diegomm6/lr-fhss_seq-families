@@ -88,7 +88,7 @@ class FHSLocator():
                         break # select first possible shift fs that fits seq s at time t
 
                 if len(possibleShift) > 0:
-                    Tp.append((t, s+shift, fitness))
+                    Tp.append((t, s+shift)) #fitness, possibleShift[0]
         
         return Tp
     
@@ -111,7 +111,7 @@ class FHSLocator():
             if fh < self.numHeaders:
 
                 endTime = time + self.headerSlots
-                header = self.receivedMatrix[time : endTime, (startFreq - dynamicShift): endFreq]
+                header = self.receivedMatrix[(startFreq - dynamicShift) : endFreq, time : endTime]
 
                 if self.fits(header, True):
                     fitness += 1
@@ -124,7 +124,7 @@ class FHSLocator():
             else:
 
                 endTime = time + self.timeGranularity
-                fragment = self.receivedMatrix[time : endTime, (startFreq - dynamicShift) : endFreq]
+                fragment = self.receivedMatrix[(startFreq - dynamicShift) : endFreq, time : endTime]
 
                 if self.fits(fragment, False):
                     fitness += 1
@@ -146,20 +146,18 @@ class FHSLocator():
         fn = 0 # (t,s,l) in T     but  not in T'
 
         fplist = []
-        almost = []
-
         #for t in Tt:
         #    print('True seq:', t)
         
         for t in Tt:
             if t in Tp:
                 tp += 1
-                print('TP:', t)
+                #print('TP:', t)
             else:
                 fn += 1
-                print('FN:', t)
+                #print('FN:', t)
         for t in Tp:
-            time,s,l = t
+            time,s = t # time,s,l,ds = t
             if t not in Tt:
                 fp += 1
                 fplist.append(list(t))
@@ -168,18 +166,14 @@ class FHSLocator():
         if len(fplist):
             fplist = np.array(fplist)
             fplist = fplist[fplist[:, 0].argsort()]
-            [print('FP:', tuple(t)) for t in fplist]
+            #[print('FP:', tuple(t)) for t in fplist]
 
 
-        #print('diff1', self.metric_processing(Tt, Tp))
-
-        #header = 'TP,FP,FN,len(T),len(T\'),dup(T),dup(T\'),time[s]\n'
         header = 'TP,FP,FN,len(T),len(T\'),time[s]\n'
-        #string = '{},{},{},{},{},{},{},{:.2f}'.format(tp, fp, fn, len(Tt), len(Tp), len(Tt) - len(Tt_set), len(Tp) - len(Tp_set), solve_time)
-        string = '{},{},{},{},{},{:.2f}'.format(tp, fp, fn, len(Tt), len(Tp), solve_time)
+        string = f'{tp},{fp},{fn},{len(Tt)},{len(Tp)},{solve_time:.2f}'
         #print(header+string)
 
-        return tp, fp, fn, self.metric_processing2(Tt, Tp)
+        return tp, fp, fn, 0 #self.metric_processing2(Tt, Tp)
     
 
     def metric_processing(self, Tt, Tp):
@@ -212,4 +206,3 @@ class FHSLocator():
                 lengthmismatch += 1
 
         return lengthmismatch
-    

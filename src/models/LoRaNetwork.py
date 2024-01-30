@@ -20,6 +20,7 @@ class LoRaNetwork():
         self.numOCW = numOCW
         self.numOBW = numOBW
         self.simTime = simTime
+        self.numNodes = numNodes
         self.timeGranularity = timeGranularity # time slots per fragmet
         self.freqGranularity = freqGranularity # freq slots per OBW
         self.use_earlydecode = use_earlydecode
@@ -243,13 +244,15 @@ class LoRaNetwork():
         Tt = []
         tx : LoRaTransmission
         for tx in transmissions:
-            Tt.append((tx.startSlot, tx.seqid, len(tx.sequence)))
+            ds = round(tx.dopplerShift[0] / self.freqPerSlot)
+            Tt.append((tx.startSlot, tx.seqid)) # , len(tx.sequence), ds
         
         # create binary received matrix
         collision_matrix = self.get_dynamicdoppler_collision_matrix(transmissions)
+        #collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
         collision_matrix[collision_matrix > 1] = 1 # binary recv matrix
 
-        return extendedFamily, Tt, collision_matrix[0].T
+        return extendedFamily, Tt, collision_matrix[0]
     
 
     def exhaustive_search(self):
@@ -263,6 +266,107 @@ class LoRaNetwork():
 
         return self.fhsLocator.print_metrics(Tt, Tp, solve_time)
     
+
+    def exhaustive_search_Wfilter(self):
+
+        FHSset, Tt, RXbinary_matrix = self.generate_extended_m()
+        self.fhsLocator.set_RXmatrix(RXbinary_matrix)
+
+        start_time = time.process_time()
+        Tp = self.fhsLocator.create_Tp_parallel(FHSset)
+        solve_time = time.process_time() - start_time
+
+        #self.printknapSack(self.numNodes, Tp, RXbinary_matrix)
+
+        return self.fhsLocator.print_metrics(Tt, Tp, solve_time)
+    
+
+    ######################################
+    # KNAPSACK TO FILTER FHS SEARCH RESULT
+    ######################################
+
+    #def estimateDynamicDoppler(self, ds):
+    #    dsHz = ds * self.freqPerSlot
+    
+    def _add(self, tx, Mp):
+
+        time = tx[0]
+        seq = self.FHSfam.FHSfam[tx[1]][:tx[2]]
+        ds = tx[3] #dopplerShift = self.estimateDynamicDoppler(tx[3])
+
+        auxM = np.zeros(Mp.shape)
+        for fh, obw in enumerate(seq):
+
+            startFreq = self.baseFreq + obw * self.freqGranularity + ds
+            endFreq = startFreq + self.freqGranularity
+
+            # write header
+            if fh < self.numHeaders:
+                endTime = time + self.headerSlots
+                auxM[startFreq : endFreq, time : endTime] += self.header
+
+            # write fragment
+            else:
+                endTime = time + self.timeGranularity
+                auxM[startFreq : endFreq, time : endTime] += self.fragment
+            
+            time = endTime
+
+        boolauxM = np.array(auxM, dtype=bool)
+        return np.logical_or(Mp, boolauxM)
+
+
+    def get_ToverM_fitness(self, M, tx, Mp):
+        newMp = self._add(tx, Mp)
+        return (M == newMp).sum(), newMp
+
+
+    def printknapSack(self, numTX, Tp, M):
+
+        F,T = M.shape
+        boolM = np.array(M, dtype=bool)
+        numTp = len(Tp)
+
+        K = [[0 for w in range(numTX + 1)] for i in range(numTp + 1)]
+
+        matricesOld = np.zeros((numTX+1, F, T), dtype=bool) # i-1 matrices
+        matricesNew = np.zeros((numTX+1, F, T), dtype=bool) # i matrices
+
+        selected = np.full((numTp+1, numTX+1), '')
+                
+        # Build table K[][] in bottom up manner
+        for i in range(numTp + 1):
+            for w in range(numTX + 1):
+
+                if i == 0 or w == 0:
+                    K[i][w] = 0
+
+                #elif 1 <= w:
+                else:
+                    fitnessWitem, newMp = self.get_ToverM_fitness(boolM, Tp[i-1], matricesOld[w-1])
+                    
+                    if fitnessWitem > K[i - 1][w]:
+                        K[i][w] = fitnessWitem
+                        matricesNew[w] = newMp
+                        selected[i][w] += f"{Tp[i-1][1]:05}-"
+
+                    else:
+                        K[i][w] = K[i - 1][w]
+                        matrix_i0_w0 = matrix_i1_w0
+                #else:
+                #    K[i][w] = K[i - 1][w]
+                #    matricesNew[w] = matricesOld[w]
+                        
+  
+
+            
+
+
+        filteredTp_stringlist = selected[numTp][numTX][:-1].split("-")
+        print(len(filteredTp_stringlist))
+        #for Tp_id in filteredTp_stringlist:
+            #print(Tp[int(Tp_id)])
+
 
     ########################
     # DATA GATHERING METHODS
