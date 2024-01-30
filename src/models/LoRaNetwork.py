@@ -332,11 +332,10 @@ class LoRaNetwork():
         matricesOld = np.zeros((numTX+1, F, T), dtype=bool) # i-1 matrices
         matricesNew = np.zeros((numTX+1, F, T), dtype=bool) # i matrices
 
-        selected = np.full((numTp+1, numTX+1), '')
+        selected = [['-' for w in range(numTX + 1)] for i in range(numTp + 1)]
                 
         # Build table K[][] in bottom up manner
         for i in range(numTp + 1):
-            print(i)
             for w in range(numTX + 1):
 
                 if i == 0 or w == 0:
@@ -348,12 +347,14 @@ class LoRaNetwork():
                     if fitnessWitem > K[i - 1][w]:
                         K[i][w] = fitnessWitem
                         matricesNew[w] = newMp
-                        selected[i][w] += f"{Tp[i-1][1]:05}-"
+                        selected[i][w] = selected[i-1][w] + f"{i}-"
 
                     else:
                         K[i][w] = K[i - 1][w]
                         matricesNew[w] = matricesOld[w]
+                        selected[i][w] = selected[i-1][w]
                         
+            print(f'{i}:\tbestfit = {K[i][w]}\tselected = {selected[i][w]}\t\tTi = {Tp[i-1]}')
             matricesOld = matricesNew
             
 
