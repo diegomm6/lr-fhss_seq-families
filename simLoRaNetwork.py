@@ -21,7 +21,7 @@ def get_decoded_m():
     use_earlydrop = True
     use_headerdrop = False
     familyname = "driver"
-    numNodes = 500
+    numNodes = 400
 
     random.seed(0)
 
@@ -32,28 +32,31 @@ def get_decoded_m():
     transmissions = network.get_transmissions()
     staticdoppler_matrix = network.get_staticdoppler_collision_matrix(transmissions)
     dynamicdoppler_matrix = network.get_dynamicdoppler_collision_matrix(transmissions)
-
     network.gateway.run(transmissions, staticdoppler_matrix)
     decoded_m = network.get_decoded_matrix(binary=False)
 
     # binary
-    staticdoppler_matrix[staticdoppler_matrix > 1] = 1
+    binary_matrix = dynamicdoppler_matrix.copy()[0]
+    binary_matrix[binary_matrix > 1] = 1
+
+    # 3-value
+    value3_matrix = dynamicdoppler_matrix.copy()[0]
+    value3_matrix[value3_matrix > 2] = 2
+
+    # corner
     cornerm = cornerdetect(staticdoppler_matrix[0])
     newm = np.add(staticdoppler_matrix[0], cornerm)
 
-
-    # detected / received difference matrix
+    # detected/received difference matrix
     #diff = np.subtract(staticdoppler_matrix, decoded_m)
 
     fslots, tslots = decoded_m[0].shape
     tmax =  round(tslots* 102.4/timeGranularity / 1000)
     fmax = round(fslots * 488.28125/freqGranularity / 1000)
-
-
     fig = plt.figure(figsize=(18,12))
-    im = plt.imshow(newm, extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
+    im = plt.imshow(dynamicdoppler_matrix[0], extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
     fig.colorbar(im)
-    plt.title('collision_matrix using 1 OCW channel')
+    plt.title(f'tx count collision matrix, {numNodes} txs, 1 OCW channel')
     plt.xlabel('s')
     plt.ylabel('kHz')
     plt.show()
@@ -63,7 +66,7 @@ def get_decoded_m():
 
 def get_simdata(v):
 
-    runs = 1
+    runs = 10
     simTime = 500
     numOCW = 1
     numOBW = 280
@@ -93,7 +96,7 @@ def get_simdata(v):
     avg_tp = 0
     avg_fp = 0
     avg_fn = 0
-    avg_diff1 = 0
+    avg_time = 0
     for r in range(runs):
         random.seed(2*r)
 
@@ -105,16 +108,16 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
-        tp, fp, fn, diff1 = network.exhaustive_search_Wfilter()
+        tp, fp, fn, time = network.exhaustive_search()
         avg_tp += tp
         avg_fp += fp
         avg_fn += fn
-        avg_diff1 += diff1 
+        avg_time += time 
         network.restart()
 
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
          avg_decoded_hrd_pld / runs, avg_decoded_hdr / runs, avg_decodable_pld / runs,
-         avg_collided_hdr_pld / runs, avg_tp / runs, avg_fp / runs, avg_fn / runs, avg_diff1 / runs]
+         avg_collided_hdr_pld / runs, avg_tp / runs, avg_fp / runs, avg_fn / runs, avg_time / runs]
 
     print(f"{numNodes}", x)
     return x
@@ -124,8 +127,8 @@ def runsim():
 
     print('driver\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
-    #netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
-    netSizes = [450]#, 1000, 2000, 5000, 10000]
+    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
+    #netSizes = [450]#, 1000, 2000, 5000, 10000]
 
     #pool = Pool(processes = 20)
     #result = pool.map(get_simdata, netSizes)
@@ -147,7 +150,7 @@ def runsim():
     print(basestr+'tp,', [round(i[7],6) for i in result])
     print(basestr+'fp,', [round(i[8],6) for i in result])
     print(basestr+'fn,', [round(i[9],6) for i in result])
-    print(basestr+'diff1,', [round(i[10],6) for i in result])
+    print(basestr+'time,', [round(i[10],6) for i in result])
     
 
 if __name__ == "__main__":

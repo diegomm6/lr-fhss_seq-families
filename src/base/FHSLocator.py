@@ -88,7 +88,7 @@ class FHSLocator():
                         break # select first possible shift fs that fits seq s at time t
 
                 if len(possibleShift) > 0:
-                    Tp.append((t, s+shift, fitness, possibleShift[0])) #fitness, possibleShift[0]
+                    Tp.append((t, s+shift)) #fitness, possibleShift[0]
         
         return Tp
     
@@ -139,41 +139,32 @@ class FHSLocator():
         return True, fitness
     
 
-    def print_metrics(self, Tt, Tp, solve_time):
+    def get_metrics(self, Tt, Tp):
 
         tp = 0 # (t,s,l) in T     and  in T'
         fp = 0 # (t,s,l) not in T but  in T'
         fn = 0 # (t,s,l) in T     but  not in T'
 
-        fplist = []
-        #for t in Tt:
-        #    print('True seq:', t)
-        
-        for t in Tt:
-            if t in Tp:
+        for tx in Tt:
+            if tx in Tp:
                 tp += 1
                 #print('TP:', t)
             else:
                 fn += 1
                 #print('FN:', t)
-        for t in Tp:
-            time,s,l,ds = t # time,s,l,ds = t
-            if t not in Tt:
-                fp += 1
-                fplist.append(list(t))
-                #print('FP:', t)
 
-        if len(fplist):
+        fplist = []
+        for tx in Tp:
+            if tx not in Tt:
+                fp += 1
+                fplist.append(list(tx))
+
+        if len(fplist): # print fp txs in chronological order
             fplist = np.array(fplist)
             fplist = fplist[fplist[:, 0].argsort()]
             #[print('FP:', tuple(t)) for t in fplist]
 
-
-        header = 'TP,FP,FN,len(T),len(T\'),time[s]\n'
-        string = f'{tp},{fp},{fn},{len(Tt)},{len(Tp)},{solve_time:.2f}'
-        #print(header+string)
-
-        return tp, fp, fn, 0 #self.metric_processing2(Tt, Tp)
+        return tp, fp, fn
     
 
     def metric_processing(self, Tt, Tp):

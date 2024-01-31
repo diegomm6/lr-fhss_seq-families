@@ -192,6 +192,7 @@ class LoRaNetwork():
     def get_decoded_matrix(self, binary : bool) -> np.ndarray:
         """
         Create decode matrix from decoded transmissions set
+        MUST be used after run(), otherwise there will be no decoded txs
         """
 
         decoded_matrix = np.zeros((self.numOCW, self.frequencySlots, self.simTime))
@@ -226,18 +227,30 @@ class LoRaNetwork():
         return decoded_matrix
     
 
+    def get_decoded_txs(self):
+        """
+        Returns start time and seq id for each decoded header, regardless of payload status
+        MUST be used after run(), otherwise there will be no decoded txs
+        """
+        decoded = self.gateway.get_decoded()
+
+        Tt_decoded = []
+        tx : LoRaTransmission
+        for tx, pld_status in decoded:
+            Tt_decoded.append((tx.startSlot, tx.seqid))
+
+        return Tt_decoded
+    
+
+    def second_decoding(self, Tp):
+        return
+    
+
     ##################################
     # FHS SEARCH FOR HEADERLESS DECODE
     ##################################
             
-    def generate_extended_m(self):
-
-        seq_length_range = 23  # max length(seqs) - min length(seqs) +1 over "y" axis
-
-        # extend FHS set to include all subsequences
-        extendedFamily = []
-        for fhs in self.FHSfam.FHSfam:
-            extendedFamily.append(fhs[:34]) # CHANGE HERE FOR DIFFERENT CR 
+    def generate_Tt_M(self):
 
         # create tx list in the form (time, seqid, seqlength)
         transmissions = self.get_transmissions()
@@ -245,40 +258,29 @@ class LoRaNetwork():
         tx : LoRaTransmission
         for tx in transmissions:
             ds = round(tx.dopplerShift[0] / self.freqPerSlot)
-            Tt.append((tx.startSlot, tx.seqid, len(tx.sequence), ds)) # , len(tx.sequence), ds
+            Tt.append((tx.startSlot, tx.seqid)) # , len(tx.sequence), ds
         
         # create binary received matrix
-        #collision_matrix = self.get_dynamicdoppler_collision_matrix(transmissions)
-        collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
+        collision_matrix = self.get_dynamicdoppler_collision_matrix(transmissions)
+        #collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
         collision_matrix[collision_matrix > 1] = 1 # binary recv matrix
 
-        return extendedFamily, Tt, collision_matrix[0]
+        return Tt, collision_matrix[0]
     
 
     def exhaustive_search(self):
 
-        FHSset, Tt, RXbinary_matrix = self.generate_extended_m()
+        Tt, RXbinary_matrix = self.generate_Tt_M()
         self.fhsLocator.set_RXmatrix(RXbinary_matrix)
 
         start_time = time.process_time()
-        Tp = self.fhsLocator.create_Tp_parallel(FHSset)
+        Tp = self.fhsLocator.create_Tp_parallel(self.FHSfam.FHSfam)
         solve_time = time.process_time() - start_time
 
-        return self.fhsLocator.print_metrics(Tt, Tp, solve_time)
-    
+        # self.printknapSack(self.numNodes, Tp, RXbinary_matrix)
+        tp, fp, fn = self.fhsLocator.get_metrics(Tt, Tp)
 
-    def exhaustive_search_Wfilter(self):
-
-        FHSset, Tt, RXbinary_matrix = self.generate_extended_m()
-        self.fhsLocator.set_RXmatrix(RXbinary_matrix)
-
-        start_time = time.process_time()
-        Tp = self.fhsLocator.create_Tp_parallel(FHSset)
-        solve_time = time.process_time() - start_time
-
-        self.printknapSack(self.numNodes, Tp, RXbinary_matrix)
-
-        return self.fhsLocator.print_metrics(Tt, Tp, solve_time)
+        return tp, fp, fn, solve_time
     
 
     ######################################
