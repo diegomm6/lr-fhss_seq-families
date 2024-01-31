@@ -273,9 +273,9 @@ class LoRaNetwork():
         Tt, RXbinary_matrix = self.generate_Tt_M()
         self.fhsLocator.set_RXmatrix(RXbinary_matrix)
 
-        start_time = time.process_time()
+        start = time.time()
         Tp = self.fhsLocator.create_Tp_parallel(self.FHSfam.FHSfam)
-        solve_time = time.process_time() - start_time
+        solve_time = time.time()-start
 
         # self.printknapSack(self.numNodes, Tp, RXbinary_matrix)
         tp, fp, fn = self.fhsLocator.get_metrics(Tt, Tp)

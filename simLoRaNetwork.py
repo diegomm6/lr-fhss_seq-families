@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from src.models.LoRaNetwork import LoRaNetwork
 from src.base.base import cornerdetect
+import time
 
 def get_decoded_m():
 
@@ -108,11 +109,11 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
-        tp, fp, fn, time = network.exhaustive_search()
+        tp, fp, fn, _time = network.exhaustive_search()
         avg_tp += tp
         avg_fp += fp
         avg_fn += fn
-        avg_time += time 
+        avg_time += _time 
         network.restart()
 
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
@@ -127,8 +128,8 @@ def runsim():
 
     print('driver\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 4.0, num=50)
-    #netSizes = [450]#, 1000, 2000, 5000, 10000]
+    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
+    #netSizes = [350]#, 1000, 2000, 5000, 10000]
 
     #pool = Pool(processes = 20)
     #result = pool.map(get_simdata, netSizes)
