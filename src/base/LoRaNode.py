@@ -128,10 +128,10 @@ class LoRaNode():
         time = random.uniform(-tau+maxFrameTime, tau-maxFrameTime)
 
         hdr_frg_times = self.calculate_hdr_frg_times(time, numHeaders, numFragments)
-        staticDoppler = [dopplerShift(t) for t in hdr_frg_times]
+        dynamicDoppler = [dopplerShift(t) for t in hdr_frg_times]
         #staticDoppler = [0 for t in hdr_frg_times]
 
         tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders, payload_size,
-                              numFragments, sequence, seqid, d, staticDoppler, power=0)
+                              numFragments, sequence, seqid, d, dynamicDoppler, power=0)
 
         return [tx]

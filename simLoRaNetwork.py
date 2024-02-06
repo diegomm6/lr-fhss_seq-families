@@ -8,7 +8,7 @@ from src.models.LoRaNetwork import LoRaNetwork
 from src.base.base import cornerdetect
 import time
 
-def get_decoded_m():
+def get_RXmatrix():
 
     simTime = 500
     numOCW = 1
@@ -21,7 +21,7 @@ def get_decoded_m():
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
-    familyname = "driver"
+    familyname = "lifan"
     numNodes = 400
 
     random.seed(0)
@@ -67,7 +67,7 @@ def get_decoded_m():
 
 def get_simdata(v):
 
-    runs = 10
+    runs = 1
     simTime = 500
     numOCW = 1
     numOBW = 280
@@ -79,7 +79,7 @@ def get_simdata(v):
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
-    familyname = "driver"
+    familyname = "lifan"
 
     numNodes = int(v)
 
@@ -128,8 +128,8 @@ def runsim():
 
     print('driver\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
-    #netSizes = [350]#, 1000, 2000, 5000, 10000]
+    #netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
+    netSizes = [350]#, 1000, 2000, 5000, 10000]
 
     #pool = Pool(processes = 20)
     #result = pool.map(get_simdata, netSizes)
@@ -156,5 +156,5 @@ def runsim():
 
 if __name__ == "__main__":
 
-    #get_decoded_m()
-    runsim()
+    get_RXmatrix()
+    #runsim()
