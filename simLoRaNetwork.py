@@ -126,10 +126,10 @@ def get_simdata(v):
 
 def runsim():
 
-    print('driver\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
+    print('lifan 34 hops\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
     #netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
-    netSizes = [350]#, 1000, 2000, 5000, 10000]
+    netSizes = [400]#, 1000, 2000, 5000, 10000]
 
     #pool = Pool(processes = 20)
     #result = pool.map(get_simdata, netSizes)
@@ -156,5 +156,5 @@ def runsim():
 
 if __name__ == "__main__":
 
-    get_RXmatrix()
-    #runsim()
+    #get_RXmatrix()
+    runsim()

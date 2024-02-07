@@ -1,5 +1,6 @@
 import numpy as np
 from multiprocessing import Pool
+from src.base.base import dopplerShift, bisection
 
 class FHSLocator():
 
@@ -8,6 +9,9 @@ class FHSLocator():
                  max_packet_duration: int, maxFreqShift: float) -> None:
         
         self.simTime = simTime
+        self.hdrTime = hdrTime
+        self.frgTime = frgTime
+        self.freqPerSlot = freqPerSlot
         self.numHeaders = numHeaders
         self.headerSlots = headerSlots
         self.timeGranularity = timeGranularity
@@ -18,15 +22,33 @@ class FHSLocator():
         self.fragmentSize = timeGranularity * freqGranularity # time-freq frg size
 
         self.min_seqlength = 11 # CHANGE HERE FOR DIFFERENT CR
-        maxDopplerRate = 300    # Hz/s
 
-        self.maxDopplerSlots = round(22000 / freqPerSlot)
         self.baseFreq = round(maxFreqShift / freqPerSlot)
 
+        maxDopplerRate = 300    # Hz/s
         self.maxHdrShift = int(np.ceil(maxDopplerRate * hdrTime / freqPerSlot))
         self.maxFrgShift = int(np.ceil(maxDopplerRate * frgTime / freqPerSlot))
 
         self.receivedMatrix = np.zeros(1)
+
+        g = 9.80665    # m/s2
+        R = 6371000    # m
+        H = 600000     # m,  satellite altitude
+        maxRange = 1500000 # max range
+
+        d = maxRange                                     # slant distance
+        E = np.arcsin( (H**2 + 2*H*R - d**2) / (2*d*R) ) # elevation angle
+        dg = R * np.arcsin( d*np.cos(E) / (R+H) )        # ground range
+        v = np.sqrt( g*R / (1 + H/R) )                   # satellite velocity
+        maxtau = dg / v                                  # half satellite visibility time
+
+        self.maxFrameTime = 3.8
+        self.T = np.linspace(-maxtau, maxtau, 100*simTime)
+        self.DS = np.asarray([dopplerShift(t) for t in self.T])
+
+        self.maxDopplerSlots = round(self.DS[-1] / freqPerSlot)
+        self.DSperHdr = round(self.hdrTime / (self.T[1] - self.T[0]))
+        self.DSperFrg = round(self.frgTime / (self.T[1] - self.T[0]))
 
     
     def set_RXmatrix(self, RXMatrix: np.ndarray):
@@ -80,18 +102,19 @@ class FHSLocator():
             for s, seq in enumerate(seqs):
 
                 possibleShift = []
-                for fs in range(-self.maxDopplerSlots, self.maxDopplerSlots, 1):
+                for DS in range(-self.maxDopplerSlots, self.maxDopplerSlots, 1):
 
-                    fits, fitness = self.isPossibeShift(fs, t, seq)
+                    fits, fitness = self.isPossibeShift(DS, t, seq)
                     if fits:
-                        possibleShift.append(fs)
-                        break # select first possible shift fs that fits seq s at time t
+                        possibleShift.append(DS)
+                        break # select first possible Doppler Shift that fits seq s at time t
 
                 if len(possibleShift) > 0:
                     Tp.append((t, s+shift)) #fitness, possibleShift[0]
         
         return Tp
-    
+
+
 
     def isPossibeShift(self, staticShift, startTime, seq):
         """
@@ -99,24 +122,27 @@ class FHSLocator():
         for a given static doppler shift at the beginnig of the transmission 
         """
 
-        dynamicShift = 0
+        estDSidx = bisection(self.DS, staticShift * self.freqPerSlot)
+
         fitness = 0
         time = startTime
         for fh, obw in enumerate(seq):
 
-            startFreq = self.baseFreq + obw * self.freqGranularity + staticShift
-            endFreq = startFreq + self.freqGranularity 
+            estDynamicShift_Hz = self.DS[estDSidx]
+
+            startFreq = self.baseFreq + obw * self.freqGranularity + round(estDynamicShift_Hz / self.freqPerSlot) -1
+            endFreq = startFreq + self.freqGranularity +1
 
             # header
             if fh < self.numHeaders:
 
                 endTime = time + self.headerSlots
-                header = self.receivedMatrix[(startFreq - dynamicShift) : endFreq, time : endTime]
+                header = self.receivedMatrix[startFreq : endFreq, time : endTime]
 
                 if self.fits(header, True):
                     fitness += 1
                     time = endTime
-                    dynamicShift += self.maxHdrShift
+                    estDSidx -= self.DSperHdr
                 else:
                     return False, 0
         
@@ -124,12 +150,12 @@ class FHSLocator():
             else:
 
                 endTime = time + self.timeGranularity
-                fragment = self.receivedMatrix[(startFreq - dynamicShift) : endFreq, time : endTime]
+                fragment = self.receivedMatrix[startFreq : endFreq, time : endTime]
 
                 if self.fits(fragment, False):
                     fitness += 1
                     time = endTime
-                    dynamicShift += self.maxFrgShift
+                    estDSidx -= self.DSperFrg
                 else:
                     if fitness >= self.min_seqlength:
                         return True, fitness
