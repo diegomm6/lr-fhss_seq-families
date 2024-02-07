@@ -67,7 +67,7 @@ def get_RXmatrix():
 
 def get_simdata(v):
 
-    runs = 1
+    runs = 10
     simTime = 500
     numOCW = 1
     numOBW = 280
@@ -126,10 +126,10 @@ def get_simdata(v):
 
 def runsim():
 
-    print('lifan 34 hops\tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
+    print('lifan \tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
-    #netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
-    netSizes = [400]#, 1000, 2000, 5000, 10000]
+    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
+    #netSizes = [400]#, 1000, 2000, 5000, 10000]
 
     #pool = Pool(processes = 20)
     #result = pool.map(get_simdata, netSizes)

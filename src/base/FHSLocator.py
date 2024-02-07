@@ -128,9 +128,7 @@ class FHSLocator():
         time = startTime
         for fh, obw in enumerate(seq):
 
-            estDynamicShift_Hz = self.DS[estDSidx]
-
-            startFreq = self.baseFreq + obw * self.freqGranularity + round(estDynamicShift_Hz / self.freqPerSlot) -1
+            startFreq = self.baseFreq + obw * self.freqGranularity + round(self.DS[estDSidx] / self.freqPerSlot) -1
             endFreq = startFreq + self.freqGranularity +1
 
             # header
