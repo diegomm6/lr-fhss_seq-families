@@ -85,6 +85,32 @@ class Processor():
 
     def isCollided(self, subm: np.ndarray) -> bool:
         return not (subm == 1).all()
+    
+
+    def isCollidedPower(self, subm: np.ndarray) -> bool:
+
+        freqOverlapThreshold = 0.25
+        symbolThreshold = 0.8
+
+        flsots, tslots = subm.shape
+
+        preamble = subm[:,0]
+
+        th1 = [np.median(subm[:,ts]) for ts in range(tslots)]
+
+        valid = 0
+        estPower = 0
+
+        for ts in range(tslots):
+
+            pass
+
+
+
+
+
+
+        return
 
     
     def decode(self, tx: LoRaTransmission, collision_matrix: np.ndarray) -> int:

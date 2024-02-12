@@ -2,6 +2,7 @@ import time
 import galois
 import random
 import numpy as np
+from src.base.base import get_FS_pathloss, dBm2mW, mW2dBm
 from src.base.Event import *
 from src.base.LoRaNode import LoRaNode
 from src.base.LoRaGateway import LoRaGateway
@@ -37,6 +38,8 @@ class LoRaNetwork():
         headerTime = 0.233472    # seconds
         fragmentTime = 0.1024    # seconds
 
+        self.OCWcarrier = 868100000 # OCW channel carrier freq
+
         self.headerSlots = round(timeGranularity * headerTime / fragmentTime)
         self.freqPerSlot = OBWchannelBW / self.freqGranularity
         self.frequencySlots = int(round(OCWchannelRXBW / self.freqPerSlot))
@@ -52,6 +55,10 @@ class LoRaNetwork():
         maxDopplerShift = (OCWchannelRXBW - OCWchannelTXBW) / 2
         self.maxFreqShift = CFO + maxDopplerShift
         self.baseFreq = round(self.maxFreqShift / self.freqPerSlot) # freq offset to center TX window over RX window
+
+        self.TXgain_dB = 5
+        self.RXgain_dB = 0
+        self.AWGNvar_dB = -174 + 6 + 10 * np.log10(OBWchannelBW) # noise figure = 6 dB
 
         ###########################
         # INTIALIZE NETWORK MODULES
@@ -227,23 +234,40 @@ class LoRaNetwork():
         return decoded_matrix
     
 
-    def get_decoded_txs(self):
+    def get_power_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
         """
-        Returns start time and seq id for each decoded header, regardless of payload status
-        MUST be used after run(), otherwise there will be no decoded txs
+        Create receiver matrix from given transmissions set
+        Variable Static doppler shift PER header/fragment is considered
+        Received matrix is based on received power
         """
-        decoded = self.gateway.get_decoded()
 
-        Tt_decoded = []
-        tx : LoRaTransmission
-        for tx, pld_status in decoded:
-            Tt_decoded.append((tx.startSlot, tx.seqid))
+        collision_matrix = np.random.rayleigh(1, (self.numOCW, self.frequencySlots, self.simTime)) * dBm2mW(self.AWGNvar_dB)
 
-        return Tt_decoded
-    
+        # static doppler per header / fragment
+        for tx in transmissions:
 
-    def second_decoding(self, Tp):
-        return
+            time = tx.startSlot
+            for fh, obw in enumerate(tx.sequence):
+
+                startFreq = self.baseFreq + obw * self.freqGranularity + round(tx.dopplerShift[fh] / self.freqPerSlot)
+                endFreq = startFreq + self.freqGranularity
+
+                carrier = self.OCWcarrier + startFreq * self.freqPerSlot
+                RXpower = dBm2mW(self.TXgain_dB) * dBm2mW(self.RXgain_dB) * dBm2mW(tx.power) * get_FS_pathloss(tx.distance, carrier)
+
+                # write header
+                if fh < tx.numHeaders:
+                    endTime = time + self.headerSlots
+                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += (self.header * RXpower)
+
+                # write fragment
+                else:
+                    endTime = time + self.timeGranularity
+                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += (self.fragment * RXpower)
+                
+                time = endTime
+
+        return mW2dBm(collision_matrix)
     
 
     ##################################
@@ -371,6 +395,20 @@ class LoRaNetwork():
     ########################
     # DATA GATHERING METHODS
     ########################
+ 
+    def get_decoded_txs(self):
+        """
+        Returns start time and seq id for each decoded header, regardless of payload status
+        MUST be used after run(), otherwise there will be no decoded txs
+        """
+        decoded = self.gateway.get_decoded()
+
+        Tt_decoded = []
+        tx : LoRaTransmission
+        for tx, pld_status in decoded:
+            Tt_decoded.append((tx.startSlot, tx.seqid))
+
+        return Tt_decoded
 
     def get_tracked_txs(self) -> int:
         return self.gateway.get_tracked_txs()

@@ -43,6 +43,7 @@ class LoRaNode():
 
         self.headertime = 0.233472
         self.fragmenttime = 0.1024
+        self.TXpower = 14 # dBm, approx 25 mW
 
 
     def restart(self) -> None:
@@ -132,6 +133,6 @@ class LoRaNode():
         #staticDoppler = [0 for t in hdr_frg_times]
 
         tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders, payload_size,
-                              numFragments, sequence, seqid, d, dynamicDoppler, power=0)
+                              numFragments, sequence, seqid, d, dynamicDoppler, self.TXpower)
 
         return [tx]

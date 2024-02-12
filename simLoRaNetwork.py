@@ -5,7 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from src.models.LoRaNetwork import LoRaNetwork
-from src.base.base import cornerdetect
+from src.base.base import cornerdetect, dBm2mW, get_FS_pathloss
 import time
 
 def get_RXmatrix():
@@ -21,7 +21,7 @@ def get_RXmatrix():
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
-    familyname = "lifan"
+    familyname = "driver"
     numNodes = 400
 
     random.seed(0)
@@ -31,8 +31,11 @@ def get_RXmatrix():
                           use_headerdrop)
 
     transmissions = network.get_transmissions()
+
     staticdoppler_matrix = network.get_staticdoppler_collision_matrix(transmissions)
     dynamicdoppler_matrix = network.get_dynamicdoppler_collision_matrix(transmissions)
+    RXpower_matrix = network.get_power_collision_matrix(transmissions)
+
     network.gateway.run(transmissions, staticdoppler_matrix)
     decoded_m = network.get_decoded_matrix(binary=False)
 
@@ -55,9 +58,9 @@ def get_RXmatrix():
     tmax =  round(tslots* 102.4/timeGranularity / 1000)
     fmax = round(fslots * 488.28125/freqGranularity / 1000)
     fig = plt.figure(figsize=(18,12))
-    im = plt.imshow(dynamicdoppler_matrix[0], extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
+    im = plt.imshow(RXpower_matrix[0], extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
     fig.colorbar(im)
-    plt.title(f'tx count collision matrix, {numNodes} txs, 1 OCW channel')
+    plt.title(f'received signals in dB, {numNodes} txs, 1 OCW channel')
     plt.xlabel('s')
     plt.ylabel('kHz')
     plt.show()
@@ -156,5 +159,5 @@ def runsim():
 
 if __name__ == "__main__":
 
-    #get_RXmatrix()
-    runsim()
+    get_RXmatrix()
+    #runsim()

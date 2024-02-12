@@ -168,6 +168,9 @@ def numHops(payload_length, CR):
 def dBm2mW(dBm):
     return np.power(10, (dBm/10))
 
+def mW2dBm(mW):
+    return 10 * np.log10(mW)
+
 # m, lora range
 def get_coverageTime(r):
 
@@ -179,6 +182,11 @@ def get_coverageTime(r):
 	theta = np.arccos(x)
 
 	return theta * (R+H) / v
+
+
+def get_FS_pathloss(d, f):
+    c = 299792458  # m/s
+    return (c / (4*np.pi*d*f))**2
 
 
 def get_distance(sensitivity_dBm):
