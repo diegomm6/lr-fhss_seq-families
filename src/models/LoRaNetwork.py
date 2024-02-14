@@ -113,7 +113,8 @@ class LoRaNetwork():
     
     def run(self) -> None:
         transmissions = self.get_transmissions()
-        collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
+        #collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
+        collision_matrix = self.get_power_collision_matrix(transmissions)
         self.gateway.run(transmissions, collision_matrix)
 
     def restart(self) -> None:
@@ -267,6 +268,7 @@ class LoRaNetwork():
                 
                 time = endTime
 
+        #return collision_matrix
         return mW2dBm(collision_matrix)
     
 

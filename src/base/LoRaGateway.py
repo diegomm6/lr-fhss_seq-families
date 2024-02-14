@@ -131,7 +131,8 @@ class LoRaGateway():
 
                 if tx.startSlot >= fut:
                     processor = self._processors[i]
-                    freeUpTimes[i] = processor.decode(tx, collision_matrix)
+                    #freeUpTimes[i] = processor.decode(tx, collision_matrix)
+                    freeUpTimes[i] = processor.decode_PowerBased(tx, collision_matrix)
                     break
 
 

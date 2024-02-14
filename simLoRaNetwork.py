@@ -22,7 +22,7 @@ def get_RXmatrix():
     use_earlydrop = True
     use_headerdrop = False
     familyname = "driver"
-    numNodes = 400
+    numNodes = 10
 
     random.seed(0)
 
@@ -49,7 +49,7 @@ def get_RXmatrix():
 
     # corner
     cornerm = cornerdetect(staticdoppler_matrix[0])
-    newm = np.add(staticdoppler_matrix[0], cornerm)
+    cornerhighlight = np.add(staticdoppler_matrix[0], cornerm)
 
     # detected/received difference matrix
     #diff = np.subtract(staticdoppler_matrix, decoded_m)
@@ -70,7 +70,7 @@ def get_RXmatrix():
 
 def get_simdata(v):
 
-    runs = 10
+    runs = 1
     simTime = 500
     numOCW = 1
     numOBW = 280
@@ -82,7 +82,7 @@ def get_simdata(v):
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
-    familyname = "lifan"
+    familyname = "driver"
 
     numNodes = int(v)
 
@@ -112,7 +112,7 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
-        tp, fp, fn, _time = network.exhaustive_search()
+        tp, fp, fn, _time = 0,0,0,0 #network.exhaustive_search()
         avg_tp += tp
         avg_fp += fp
         avg_fn += fn
@@ -129,10 +129,10 @@ def get_simdata(v):
 
 def runsim():
 
-    print('lifan \tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
+    print('driver \tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 4.0, num=50)
-    #netSizes = [400]#, 1000, 2000, 5000, 10000]
+    #netSizes = np.logspace(1.0, 2.0, num=30) # np.logspace(1.0, 3.0, num=40)
+    netSizes = [10]
 
     #pool = Pool(processes = 20)
     #result = pool.map(get_simdata, netSizes)

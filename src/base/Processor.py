@@ -1,5 +1,5 @@
 import numpy as np
-from src.base.Event import *
+from src.base.base import dBm2mW, mW2dBm
 from src.base.LoRaTransmission import LoRaTransmission
 
 class Processor():
@@ -58,6 +58,10 @@ class Processor():
         self.collided_hdr_pld = 0 # case 4
         self.decoded = []
 
+        self.AWGNvar_dB = -174 + 6 + 10 * np.log10(488.28125) # noise figure = 6 dB
+        self.th2 = 0
+        self.symbolThreshold = 0.2
+
 
     def reset(self) -> None:
         """
@@ -87,32 +91,6 @@ class Processor():
         return not (subm == 1).all()
     
 
-    def isCollidedPower(self, subm: np.ndarray) -> bool:
-
-        freqOverlapThreshold = 0.25
-        symbolThreshold = 0.8
-
-        flsots, tslots = subm.shape
-
-        preamble = subm[:,0]
-
-        th1 = [np.median(subm[:,ts]) for ts in range(tslots)]
-
-        valid = 0
-        estPower = 0
-
-        for ts in range(tslots):
-
-            pass
-
-
-
-
-
-
-        return
-
-    
     def decode(self, tx: LoRaTransmission, collision_matrix: np.ndarray) -> int:
         """
         Determine status of incoming transmissions and return free up time
@@ -124,7 +102,7 @@ class Processor():
         collided_fragments = 0
 
         maxShift = (200000 - 137000) / 2
-        freqPerSlot= 488.28125 / self.freqGranularity
+        freqPerSlot = 488.28125 / self.freqGranularity
 
         time = tx.startSlot
         baseFreq = round(maxShift / freqPerSlot) + round(tx.dopplerShift[0] / freqPerSlot)
@@ -195,3 +173,135 @@ class Processor():
 
                 time = endTime
 
+
+    def isPowerCollided(self, estSignalPower, interference, hdr):
+        
+
+        collidedslots = 0
+        timeslots = self.header_slots if hdr else self.timeGranularity
+
+        for t in range(timeslots):
+            SNIRt = mW2dBm(estSignalPower / max(dBm2mW(self.AWGNvar_dB), interference[t]))
+            
+            if SNIRt < self.th2:
+                if t==0: return True
+                collidedslots += 1
+
+        return (collidedslots/timeslots) > self.symbolThreshold
+
+
+    def decode_PowerBased(self, tx: LoRaTransmission, collision_matrix: np.ndarray) -> bool:
+
+        self.tracked_txs += 1
+        collided_headers = 0
+        decoded_fragments = 0
+        collided_fragments = 0
+
+        maxShift = (200000 - 137000) / 2
+        freqPerSlot = 488.28125 / self.freqGranularity
+
+        headers = np.zeros((tx.numHeaders, self.freqGranularity, self.header_slots))
+        fragments = np.zeros((tx.numFragments, self.freqGranularity, self.timeGranularity))
+
+        time = tx.startSlot
+        baseFreq = round(maxShift / freqPerSlot) + round(tx.dopplerShift[0] / freqPerSlot)
+
+        maxFrgCollisions = tx.numFragments - self.get_minfragments(tx.numFragments)
+
+        for fh, obw in enumerate(tx.sequence):
+            startFreq = baseFreq + obw * self.freqGranularity
+            endFreq = startFreq + self.freqGranularity
+
+            # header
+            if fh < tx.numHeaders:
+                endTime = time + self.header_slots
+                headers[fh] = collision_matrix[tx.ocw, startFreq : endFreq, time : endTime]
+
+            # fragment
+            else:
+                endTime = time + self.timeGranularity
+                fragments[fh-tx.numHeaders] = collision_matrix[tx.ocw, startFreq : endFreq, time : endTime]
+            
+            time = endTime
+
+
+        # mean over frequency dimension
+        avgHeaders = np.mean(headers, axis=1)     # (numHeaders, 1, header_slots)
+        avgFragments = np.mean(fragments, axis=1) # (numFragments, 1, timeGranularity)
+
+        # filter out interferred symbols, threshold 1 is mean over all frame
+        th1 = np.median(np.concatenate((np.ravel(avgHeaders), np.ravel(avgFragments))))
+        
+        filteredHdr = avgHeaders[avgHeaders <= th1]
+        filteredFrg = avgFragments[avgFragments <= th1]
+
+        # estimate power over un-interferred symbols based on threshold 1
+        estSignalPower = np.mean(np.concatenate((np.ravel(filteredHdr), np.ravel(filteredFrg))))
+
+        # estimate interference power
+        headersPi = avgHeaders - estSignalPower
+        fragmentsPi = avgFragments - estSignalPower
+
+
+        for fh, obw in enumerate(tx.sequence):
+
+            startFreq = baseFreq + obw * self.freqGranularity
+            endFreq = startFreq + self.freqGranularity
+
+            # header
+            if fh < tx.numHeaders:
+
+                endTime = time + self.header_slots
+
+                if self.isPowerCollided(estSignalPower, headersPi[fh], True):
+                    collided_headers += 1
+                
+                time = endTime
+
+            # fragment
+            else:
+
+                # collided header, abort payload reception
+                if self.use_headerdrop and collided_headers == tx.numHeaders:
+                    self.header_drop_packets += 1
+                    return endTime
+
+                endTime = time + self.timeGranularity
+
+                if self.isPowerCollided(estSignalPower, fragmentsPi[fh-tx.numHeaders], False):
+                    collided_fragments += 1
+
+                else:
+                    decoded_fragments += 1
+
+                # early decode - decoded or decodable payload
+                if self.use_earlydecode and decoded_fragments >= self.get_minfragments(tx.numFragments):
+
+                    # case 1
+                    if collided_headers < tx.numHeaders:
+                        self.decoded_hrd_pld += 1
+                        self.decoded_bytes += tx.payload_size
+                        self.decoded.append([tx, 1])
+
+                    # case 2
+                    else:
+                        self.decodable_pld += 1
+
+                    return endTime
+
+                # early drop - collided payload
+                if self.use_earlydrop and collided_fragments > maxFrgCollisions:
+                    
+                    # case 3
+                    if collided_headers < tx.numHeaders:
+                        self.decoded_hdr += 1
+                        self.decoded.append([tx, 0])
+
+                    # case 4
+                    else:
+                        self.collided_hdr_pld += 1
+                    
+                    return endTime
+
+                time = endTime
+        
