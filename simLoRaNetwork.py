@@ -23,42 +23,43 @@ def get_RXmatrix():
     use_headerdrop = False
     familyname = "driver"
     numNodes = 5
+    collision_method = "SINR"
 
     random.seed(0)
 
     network = LoRaNetwork(numNodes, familyname, numOCW, numOBW, numGrids, CR, timeGranularity,
                           freqGranularity, simTime, numDecoders, use_earlydecode, use_earlydrop,
-                          use_headerdrop)
+                          use_headerdrop, collision_method)
 
     transmissions = network.get_transmissions()
 
-    staticdoppler_matrix = network.get_rcvM(transmissions, power=False, dynamic=False)
-    dynamicdoppler_matrix = network.get_rcvM(transmissions, power=False, dynamic=True)
-    RXpower_matrix_dB = network.get_rcvM(transmissions, power=True, dynamic=True)
+    count_static_rcvM = network.get_rcvM(transmissions, power=False, dynamic=False)
+    count_dynamic_rcvM = network.get_rcvM(transmissions, power=False, dynamic=True)
+    power_dynamic_rcvM = network.get_rcvM(transmissions, power=True, dynamic=True)
 
-    network.gateway.run(transmissions, RXpower_matrix_dB)
+    network.gateway.run(transmissions, power_dynamic_rcvM, True)
     decoded_m = network.get_decoded_matrix(binary=False)
 
     # binary
-    binary_matrix = dynamicdoppler_matrix.copy()[0]
+    binary_matrix = count_dynamic_rcvM.copy()[0]
     binary_matrix[binary_matrix > 1] = 1
 
     # 3-value
-    value3_matrix = dynamicdoppler_matrix.copy()[0]
+    value3_matrix = count_dynamic_rcvM.copy()[0]
     value3_matrix[value3_matrix > 2] = 2
 
     # corner
-    cornerm = cornerdetect(staticdoppler_matrix[0])
-    cornerhighlight = np.add(staticdoppler_matrix[0], cornerm)
+    cornerm = cornerdetect(count_static_rcvM[0])
+    cornerhighlight = np.add(count_static_rcvM[0], cornerm)
 
     # detected/received difference matrix
-    #diff = np.subtract(staticdoppler_matrix, decoded_m)
+    #diff = np.subtract(count_static_rcvM, decoded_m)
 
-    fslots, tslots = staticdoppler_matrix[0].shape
+    fslots, tslots = count_static_rcvM[0].shape
     tmax =  round(tslots * (102.4/timeGranularity) / 1000)
     fmax = round(fslots * (488.28125/freqGranularity) / 1000)
     fig = plt.figure(figsize=(18,12))
-    im = plt.imshow(mW2dBm(RXpower_matrix_dB[0] /488), extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto') # mW2dBm(RXpower_matrix_dB[0] /488)
+    im = plt.imshow(mW2dBm(power_dynamic_rcvM[0] /488), extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto') # mW2dBm(power_dynamic_rcvM[0] /488)
     fig.colorbar(im)
     plt.title(f'Spectogram of received signals [dB/Hz], {numNodes} txs, 1 OCW channel')
     plt.xlabel('s')
@@ -86,12 +87,13 @@ def get_simdata(v):
     use_earlydrop = True
     use_headerdrop = False
     familyname = "driver"
+    collision_method = "SINR"
 
     numNodes = int(v)
 
     network = LoRaNetwork(numNodes, familyname, numOCW, numOBW, numGrids, CR, timeGranularity,
                           freqGranularity, simTime, numDecoders, use_earlydecode, use_earlydrop,
-                          use_headerdrop)
+                          use_headerdrop, collision_method)
 
     avg_tracked_txs = 0
     avg_decoded_bytes = 0

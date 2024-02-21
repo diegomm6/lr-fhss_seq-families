@@ -42,7 +42,7 @@ class Processor():
     """
 
     def __init__(self, CR: int, timeGranularity: int, freqGranularity: int, use_earlydrop: bool,
-                 use_earlydecode: bool, use_headerdrop: bool, baseFreq: int) -> None:
+                 use_earlydecode: bool, use_headerdrop: bool, baseFreq: int, collision_method: str) -> None:
         self.CR = CR
         self.timeGranularity = timeGranularity
         self.freqGranularity = freqGranularity
@@ -52,6 +52,7 @@ class Processor():
         self.use_earlydecode = use_earlydecode
         self.use_headerdrop = use_headerdrop
         self.baseFreq = baseFreq
+        self.collision_method = collision_method
 
         self.tracked_txs = 0
         self.decoded_bytes = 0
@@ -61,10 +62,10 @@ class Processor():
         self.decodable_pld = 0    # case 2
         self.collided_hdr_pld = 0 # case 4
         self.decoded = []
+        self.decoded_headers = []
 
         self.th2 = 0
         self.symbolThreshold = 0.2
-        self.collision_method = 'SINR'
 
 
     def reset(self) -> None:
@@ -78,7 +79,7 @@ class Processor():
         self.decoded_hdr = 0      # case 3
         self.decodable_pld = 0    # case 2
         self.collided_hdr_pld = 0 # case 4
-        self.decoded = []
+        self.decoded_headers = []
 
 
     def get_minfragments(self, seq_length : int) -> int:
@@ -124,9 +125,48 @@ class Processor():
                 collidedslots += 1
 
         return (collidedslots/timeslots) > self.symbolThreshold
+    
+
+    def pre_decode_headers(self, tx: LoRaTransmission, rcvM: np.ndarray, dynamic: bool) -> int:
+
+        collided_headers = 0
+        dopplershift = round(tx.dopplerShift[0] / self.freqPerSlot)
+
+        if self.collision_method == 'SINR':
+            estSignalPower, headersPi, fragmentsPi = self.get_power_estimations(tx, rcvM, dynamic)
+
+        time = tx.startSlot
+        for fh, obw in enumerate(tx.sequence):
+
+            # variable doppler shift per header / fragment
+            if dynamic:
+                dopplershift = round(tx.dopplerShift[fh] / self.freqPerSlot)
+
+            startFreq = self.baseFreq + obw * self.freqGranularity + dopplershift
+            endFreq = startFreq + self.freqGranularity
+
+            # header
+            if fh < tx.numHeaders:
+
+                endTime = time + self.headerSlots
+
+                if self.collision_method == 'strict':
+                    args = [rcvM[tx.ocw, startFreq : endFreq, time : endTime]]
+                if self.collision_method == 'SINR':
+                    args = [estSignalPower, headersPi[fh], True]
+
+                if self.isCollided(args):
+                    collided_headers += 1
+                
+                time = endTime
+
+            else: break
+
+        if collided_headers < tx.numHeaders:
+            self.decoded_headers.append(tx)
 
 
-    def decode(self, tx: LoRaTransmission, rcvM: np.ndarray, dynamic: bool) -> bool:
+    def decode(self, tx: LoRaTransmission, rcvM: np.ndarray, dynamic: bool) -> int:
         """
         Determine status of incoming transmissions and return free up time
         """
@@ -139,7 +179,8 @@ class Processor():
         dopplershift = round(tx.dopplerShift[0] / self.freqPerSlot)
         maxFrgCollisions = tx.numFragments - self.get_minfragments(tx.numFragments)
 
-        estSignalPower, headersPi, fragmentsPi = self.get_power_estimations(tx, rcvM, dynamic)
+        if self.collision_method == 'SINR':
+            estSignalPower, headersPi, fragmentsPi = self.get_power_estimations(tx, rcvM, dynamic)
 
         time = tx.startSlot
         for fh, obw in enumerate(tx.sequence):

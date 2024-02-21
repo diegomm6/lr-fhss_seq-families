@@ -15,7 +15,7 @@ from src.base.FHSLocator import FHSLocator
 class LoRaNetwork():
 
     def __init__(self, numNodes, familyname, numOCW, numOBW, numGrids, CR, timeGranularity, freqGranularity,
-                 simTime, numDecoders, use_earlydecode, use_earlydrop, use_headerdrop) -> None:
+                 simTime, numDecoders, use_earlydecode, use_earlydrop, use_headerdrop, collision_method) -> None:
         
         self.numOCW = numOCW
         self.numOBW = numOBW
@@ -37,7 +37,7 @@ class LoRaNetwork():
         OCWchannelTXBW = numOBW * OBW_BW  # OCW transmitter bandwidth in Hz
         self.maxFreqShift = (OCW_RX_BW - OCWchannelTXBW) / 2
         self.baseFreq = round(self.maxFreqShift / self.freqPerSlot) # freq offset to center TX window over RX window
-        
+
         assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
         self.numHeaders = 3 # CR == 1
         if CR == 2:
@@ -56,8 +56,8 @@ class LoRaNetwork():
         self.nodes = [LoRaNode(i, CR, numOCW, startLimit) for i in range(numNodes)]
 
         # add support for multiple gateways in the future
-        self.gateway = LoRaGateway(CR, timeGranularity, freqGranularity, use_earlydrop, 
-                                   use_earlydecode, use_headerdrop, numDecoders, self.baseFreq)
+        self.gateway = LoRaGateway(CR, timeGranularity, freqGranularity, use_earlydrop, use_earlydecode,
+                                   use_headerdrop, numDecoders, self.baseFreq, collision_method)
         
         self.fhsLocator = FHSLocator(self.simTime, self.numHeaders, self.timeGranularity, self.freqGranularity,
                                      self.freqPerSlot, self.headerSlots, max_packet_duration, self.baseFreq)

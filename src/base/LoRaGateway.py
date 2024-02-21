@@ -29,10 +29,10 @@ class LoRaGateway():
     """
 
     def __init__(self, CR: int, timeGranularity: int, freqGranularity: int, use_earlydrop: bool, 
-                 use_earlydecode: bool, use_headerdrop: bool, numDecoders: int, baseFreq: int) -> None:
+                 use_earlydecode: bool, use_headerdrop: bool, numDecoders: int, baseFreq: int, collision_method: str) -> None:
         self.numDecoders = numDecoders
         self._processors = [Processor(CR, timeGranularity, freqGranularity, use_earlydrop, use_earlydecode,
-                                      use_headerdrop, baseFreq) for _ in range(numDecoders)]
+                                      use_headerdrop, baseFreq, collision_method) for _ in range(numDecoders)]
     
 
     def restart(self) -> None:
