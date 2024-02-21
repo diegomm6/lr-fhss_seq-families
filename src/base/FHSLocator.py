@@ -1,54 +1,35 @@
 import numpy as np
 from multiprocessing import Pool
-from src.base.base import dopplerShift, bisection
+from src.base.base import *
+
 
 class FHSLocator():
 
     def __init__(self, simTime: int, numHeaders: int, timeGranularity: int, freqGranularity: int,
-                 freqPerSlot: float, hdrTime: float, frgTime: float, headerSlots: int,
-                 max_packet_duration: int, maxFreqShift: float) -> None:
+                 freqPerSlot: float, headerSlots: int, max_packet_duration: int, baseFreq: int) -> None:
         
         self.simTime = simTime
-        self.hdrTime = hdrTime
-        self.frgTime = frgTime
         self.freqPerSlot = freqPerSlot
         self.numHeaders = numHeaders
         self.headerSlots = headerSlots
         self.timeGranularity = timeGranularity
         self.freqGranularity = freqGranularity
         self.max_packet_duration = max_packet_duration
+        self.baseFreq = baseFreq
 
         self.headerSize = headerSlots * freqGranularity       # time-freq hdr size
         self.fragmentSize = timeGranularity * freqGranularity # time-freq frg size
 
+        self.receivedMatrix = np.zeros(1)
         self.min_seqlength = 11 # CHANGE HERE FOR DIFFERENT CR
 
-        self.baseFreq = round(maxFreqShift / freqPerSlot)
-
-        maxDopplerRate = 300    # Hz/s
-        self.maxHdrShift = int(np.ceil(maxDopplerRate * hdrTime / freqPerSlot))
-        self.maxFrgShift = int(np.ceil(maxDopplerRate * frgTime / freqPerSlot))
-
-        self.receivedMatrix = np.zeros(1)
-
-        g = 9.80665    # m/s2
-        R = 6371000    # m
-        H = 600000     # m,  satellite altitude
-        maxRange = 1500000 # max range
-
-        d = maxRange                                     # slant distance
-        E = np.arcsin( (H**2 + 2*H*R - d**2) / (2*d*R) ) # elevation angle
-        dg = R * np.arcsin( d*np.cos(E) / (R+H) )        # ground range
-        v = np.sqrt( g*R / (1 + H/R) )                   # satellite velocity
-        maxtau = dg / v                                  # half satellite visibility time
-
-        self.maxFrameTime = 3.8
+        maxtau = get_visibility_time(SAT_RANGE)
         self.T = np.linspace(-maxtau, maxtau, 100*simTime)
         self.DS = np.asarray([dopplerShift(t) for t in self.T])
 
         self.maxDopplerSlots = round(self.DS[-1] / freqPerSlot)
-        self.DSperHdr = round(self.hdrTime / (self.T[1] - self.T[0]))
-        self.DSperFrg = round(self.frgTime / (self.T[1] - self.T[0]))
+        self.DSperHdr = round(HDR_TIME / (self.T[1] - self.T[0]))
+        self.DSperFrg = round(FRG_TIME / (self.T[1] - self.T[0]))
 
     
     def set_RXmatrix(self, RXMatrix: np.ndarray):
@@ -60,11 +41,8 @@ class FHSLocator():
         Determines is a full header/fragment is present in the given search window
         """
 
-        if isHeader:
-            return (subm == 1).sum() >= self.headerSize
-
-        else:
-            return (subm == 1).sum() >= self.fragmentSize
+        if isHeader: return (subm == 1).sum() >= self.headerSize
+        else:        return (subm == 1).sum() >= self.fragmentSize
     
 
     def create_Tp_parallel(self, seqs):

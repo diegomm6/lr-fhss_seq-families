@@ -1,6 +1,6 @@
 import random
 import numpy as np
-from src.base.base import get_randomDoppler, dopplerShift
+from src.base.base import *
 from src.base.LoRaTransmission import LoRaTransmission
 from src.families.LR_FHSS_DriverMethod import FHSfamily
 
@@ -9,27 +9,24 @@ class LoRaNode():
     A class representing a LoRa node.
 
     Args:
-        id: The node ID.
-        CR: The coding rate.
-        numOCW: The number of occupied chirps per symbol.
-        useGrid: Whether to use a grid topology.
-        numGrids: The number of grids in the network.
-        startLimit: The start limit of the simulation time.
+        id (int): The node ID.
+        CR (int): The coding rate.
+        numOCW (int): The number of OCW channels.
+        startLimit (int): The start limit of the simulation time.
 
     Attributes:
         id (int): The node ID.
         CR (int): The coding rate.
-        numOCW (int): The number of occupied chirps per symbol.
-        useGrid (bool): Whether to use a grid topology.
-        numGrids (int): The number of grids in the network.
+        numOCW (int): The number of OCW channels.
         startLimit (int): The start limit of the simulation time.
         sent_packets (int): The number of packets sent by the node.
         sent_payload_bytes (int): The number of payload bytes sent by the node.
+        TXpower (float): transmission power in dBm
 
     Methods:
         restart(): Reset the node's statistics.
         numHops(payload_length): Calculate the number of frequency hops for the payload.
-        get_sequence(family): Get the sequence for the payload.
+        calculate_hdr_frg_times(): 
         get_transmissions(family): Get all transmissions during simulation time for this node.
 
     """
@@ -41,9 +38,7 @@ class LoRaNode():
         self.sent_packets = 0
         self.sent_payload_bytes = 0
 
-        self.headertime = 0.233472
-        self.fragmenttime = 0.1024
-        self.TXpower = 14 # dBm, approx 25 mW
+        self.TXpower = 30 # dBm, approx 25 mW
 
 
     def restart(self) -> None:
@@ -67,17 +62,19 @@ class LoRaNode():
 
     def calculate_hdr_frg_times(self, time, numHeaders, numFragments) -> list[float]:
 
+        headertime = 0.233472
+        fragmenttime = 0.1024
         hdr_frg_times = []
 
         # doppler shift decreases as the satellites moves as seeen from the nodes
 
         for hdr in range(numHeaders):
             hdr_frg_times.append(time)
-            time -= self.headertime
+            time -= headertime
 
         for frg in range(numFragments):
             hdr_frg_times.append(time)
-            time -= self.fragmenttime
+            time -= fragmenttime
 
         return hdr_frg_times
     
@@ -112,19 +109,8 @@ class LoRaNode():
         self.sent_packets += 1
         self.sent_payload_bytes += payload_size
 
-
-        g = 9.80665    # m/s2
-        R = 6371000    # m
-        H = 600000     # m,  satellite altitude
-        minRange = H
-        maxRange = 1500000 # max range
-
-        d = random.uniform(minRange, maxRange)           # slant distance
-        E = np.arcsin( (H**2 + 2*H*R - d**2) / (2*d*R) ) # elevation angle
-        dg = R * np.arcsin( d*np.cos(E) / (R+H) )        # ground range
-        v = np.sqrt( g*R / (1 + H/R) )                   # satellite velocity
-        tau = dg / v                                     # half satellite visibility time
-        
+        d = random.uniform(SAT_H, SAT_RANGE)
+        tau = get_visibility_time(d)
         maxFrameTime = 3.8
         time = random.uniform(-tau+maxFrameTime, tau-maxFrameTime)
 

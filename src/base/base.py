@@ -1,6 +1,20 @@
 import random
 import numpy as np
 
+EARTRH_G    = 9.80665      # earth gravitational constant in m/s2
+EARTRH_R    = 6371000      # earth radius in m
+SAT_H       = 600000       # satellite altitude in m
+SAT_RANGE   = 1500000      # satellite comm max range in m
+HDR_TIME    = 0.233472     # seconds
+FRG_TIME    = 0.1024       # seconds
+OBW_BW      = 488.28125    # OBW bandwidth in Hz
+OCW_RX_BW   = 200000       # OCW receiver bandwidth in Hz
+OCW_FC      = 868100000    # OCW channel carrier freq
+GAIN_TX     = 2.5          # transmitter antenna gain in db
+GAIN_RX     = 22.6         # receiver antenna gain in db
+AWGN_VAR_DB = 10*np.log10(OBW_BW) - 168 # AWGN variance in db (-174 + 6)
+
+
 # Obtain minimal gap between adyacent values for sequence X
 def get_min_gap(X):
     gap = np.inf
@@ -251,6 +265,16 @@ def get_randomDoppler() -> float:
     t0 = r0 * np.cos(theta0) * Tcov
 
     return dopplerShift(t0)
+
+
+def get_visibility_time(d):
+    
+    E = np.arcsin( (SAT_H**2 + 2*SAT_H*EARTRH_R - d**2) / (2*d*EARTRH_R) ) # elevation angle
+    dg = EARTRH_R * np.arcsin( d*np.cos(E) / (EARTRH_R+SAT_H) )            # ground range
+    v = np.sqrt( EARTRH_G*EARTRH_R / (1 + SAT_H/EARTRH_R) )                # satellite velocity
+    tau = dg / v                                                           # half satellite visibility time
+    
+    return tau
 
 
 def edgedetect(a):

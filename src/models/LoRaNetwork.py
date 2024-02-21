@@ -2,8 +2,7 @@ import time
 import galois
 import random
 import numpy as np
-from src.base.base import get_FS_pathloss, dBm2mW, mW2dBm
-from src.base.Event import *
+from src.base.base import *
 from src.base.LoRaNode import LoRaNode
 from src.base.LoRaGateway import LoRaGateway
 from src.base.LoRaTransmission import LoRaTransmission
@@ -31,19 +30,14 @@ class LoRaNetwork():
         # GLOBAL LR-FHSS PARAMETERS
         ###########################
 
-        CFO = 0 # carrier frequency offset
-        OBWchannelBW = 488.28125 # OBW bandwidth in Hz
-        OCWchannelTXBW = 137000  # OCW transmitter bandwidth in Hz
-        OCWchannelRXBW = 200000  # OCW receiver bandwidth in Hz
-        headerTime = 0.233472    # seconds
-        fragmentTime = 0.1024    # seconds
+        self.headerSlots = round(timeGranularity * HDR_TIME / FRG_TIME)
+        self.freqPerSlot = OBW_BW / self.freqGranularity
+        self.frequencySlots = int(round(OCW_RX_BW / self.freqPerSlot))
 
-        self.OCWcarrier = 868100000 # OCW channel carrier freq
-
-        self.headerSlots = round(timeGranularity * headerTime / fragmentTime)
-        self.freqPerSlot = OBWchannelBW / self.freqGranularity
-        self.frequencySlots = int(round(OCWchannelRXBW / self.freqPerSlot))
-
+        OCWchannelTXBW = numOBW * OBW_BW  # OCW transmitter bandwidth in Hz
+        self.maxFreqShift = (OCW_RX_BW - OCWchannelTXBW) / 2
+        self.baseFreq = round(self.maxFreqShift / self.freqPerSlot) # freq offset to center TX window over RX window
+        
         assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
         self.numHeaders = 3 # CR == 1
         if CR == 2:
@@ -52,13 +46,6 @@ class LoRaNetwork():
         self.header = np.ones((freqGranularity, self.headerSlots))  # header block
         self.fragment = np.ones((freqGranularity, timeGranularity)) # fragment block
 
-        maxDopplerShift = (OCWchannelRXBW - OCWchannelTXBW) / 2
-        self.maxFreqShift = CFO + maxDopplerShift
-        self.baseFreq = round(self.maxFreqShift / self.freqPerSlot) # freq offset to center TX window over RX window
-
-        self.TXgain_dB = 5
-        self.RXgain_dB = 0
-        self.AWGNvar_dB = -174 + 6 + 10 * np.log10(OBWchannelBW) # noise figure = 6 dB
 
         ###########################
         # INTIALIZE NETWORK MODULES
@@ -70,11 +57,10 @@ class LoRaNetwork():
 
         # add support for multiple gateways in the future
         self.gateway = LoRaGateway(CR, timeGranularity, freqGranularity, use_earlydrop, 
-                                   use_earlydecode, use_headerdrop, numDecoders)
+                                   use_earlydecode, use_headerdrop, numDecoders, self.baseFreq)
         
         self.fhsLocator = FHSLocator(self.simTime, self.numHeaders, self.timeGranularity, self.freqGranularity,
-                                     self.freqPerSlot, headerTime, fragmentTime, self.headerSlots,
-                                     max_packet_duration, self.maxFreqShift)
+                                     self.freqPerSlot, self.headerSlots, max_packet_duration, self.baseFreq)
 
 
     def set_FHSfamily(self, familyname, numGrids):
@@ -111,11 +97,10 @@ class LoRaNetwork():
 
         return sorted_txs
     
-    def run(self) -> None:
+    def run(self, power: bool, dynamic: bool) -> None:
         transmissions = self.get_transmissions()
-        #collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
-        collision_matrix = self.get_power_collision_matrix(transmissions)
-        self.gateway.run(transmissions, collision_matrix)
+        collision_matrix = self.get_rcvM(transmissions, power, dynamic)
+        self.gateway.run(transmissions, collision_matrix, dynamic)
 
     def restart(self) -> None:
 
@@ -130,71 +115,60 @@ class LoRaNetwork():
     # TIME-FREQ MATRIX GENERATOR METHODS
     ####################################
 
-    def get_staticdoppler_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
+    def get_rcvM(self, transmissions: list[LoRaTransmission], power: bool, dynamic: bool) -> np.ndarray:
         """
-        Create receiver matrix from given transmissions set
-        Fixed Static doppler shift FOR ALL header/fragment is considered
-        Received matrix is based on tranmission count
+        Create received matrix from given transmissions set in 4 ways.
+
+        The dynamic flag indicates to use dynamic doppler, variable doppler shift PER header/fragment.
+        If dynamic flag is off (static doppler), same doppler shift FOR ALL header/fragment.
+
+        The power flag on will output a matrix based on received power.
+        When the power flag is off, the output matrix is based on counts.
         """
-        collision_matrix = np.zeros((self.numOCW, self.frequencySlots, self.simTime))
-        
-        tx : LoRaTransmission
+
+        # count based received matrix
+        RXpower = 1
+        rcvM = np.zeros((self.numOCW, self.frequencySlots, self.simTime))
+
+        # power based received matrix
+        if power: 
+            rcvM = np.random.rayleigh(1, (self.numOCW, self.frequencySlots, self.simTime))
+            rcvM = (rcvM / np.linalg.norm(rcvM)) * np.sqrt(dBm2mW(AWGN_VAR_DB))
+
+        # add transmissions to received matrix
         for tx in transmissions:
 
-            staticShift = self.baseFreq + round(tx.dopplerShift[0] / self.freqPerSlot)
+            dopplershift = round(tx.dopplerShift[0] / self.freqPerSlot)
 
             time = tx.startSlot
             for fh, obw in enumerate(tx.sequence):
 
-                startFreq = staticShift + obw * self.freqGranularity
+                # variable doppler shift per header / fragment
+                if dynamic:
+                    dopplershift = round(tx.dopplerShift[fh] / self.freqPerSlot)
+
+                startFreq = self.baseFreq + obw * self.freqGranularity + dopplershift
                 endFreq = startFreq + self.freqGranularity
+
+                # power based received matrix
+                if power:
+                    carrier = OCW_FC + startFreq * self.freqPerSlot
+                    RXpower = dBm2mW(GAIN_TX) * dBm2mW(GAIN_RX) * dBm2mW(tx.power) \
+                            * get_FS_pathloss(tx.distance, carrier)
 
                 # write header
                 if fh < tx.numHeaders:
                     endTime = time + self.headerSlots
-                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.header
+                    rcvM[tx.ocw, startFreq : endFreq, time : endTime] += (self.header * RXpower)
 
                 # write fragment
                 else:
                     endTime = time + self.timeGranularity
-                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.fragment
+                    rcvM[tx.ocw, startFreq : endFreq, time : endTime] += (self.fragment * RXpower)
                 
                 time = endTime
 
-        return collision_matrix
-    
-
-    def get_dynamicdoppler_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
-        """
-        Create receiver matrix from given transmissions set
-        Variable Static doppler shift PER header/fragment is considered
-        Received matrix is based on tranmission count
-        """
-
-        collision_matrix = np.zeros((self.numOCW, self.frequencySlots, self.simTime))
-
-        # static doppler per header / fragment
-        for tx in transmissions:
-
-            time = tx.startSlot
-            for fh, obw in enumerate(tx.sequence):
-
-                startFreq = self.baseFreq + obw * self.freqGranularity + round(tx.dopplerShift[fh] / self.freqPerSlot)
-                endFreq = startFreq + self.freqGranularity
-
-                # write header
-                if fh < tx.numHeaders:
-                    endTime = time + self.headerSlots
-                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.header
-
-                # write fragment
-                else:
-                    endTime = time + self.timeGranularity
-                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.fragment
-                
-                time = endTime
-
-        return collision_matrix
+        return rcvM
     
 
     def get_decoded_matrix(self, binary : bool) -> np.ndarray:
@@ -233,50 +207,13 @@ class LoRaNetwork():
             decoded_matrix[decoded_matrix > 1] = 1
 
         return decoded_matrix
-    
 
-    def get_power_collision_matrix(self, transmissions: list[LoRaTransmission]) -> np.ndarray:
-        """
-        Create receiver matrix from given transmissions set
-        Variable Static doppler shift PER header/fragment is considered
-        Received matrix is based on received power
-        """
-
-        collision_matrix = np.random.rayleigh(1, (self.numOCW, self.frequencySlots, self.simTime)) * dBm2mW(self.AWGNvar_dB)
-
-        # static doppler per header / fragment
-        for tx in transmissions:
-
-            time = tx.startSlot
-            for fh, obw in enumerate(tx.sequence):
-
-                startFreq = self.baseFreq + obw * self.freqGranularity + round(tx.dopplerShift[fh] / self.freqPerSlot)
-                endFreq = startFreq + self.freqGranularity
-
-                carrier = self.OCWcarrier + startFreq * self.freqPerSlot
-                RXpower = dBm2mW(self.TXgain_dB) * dBm2mW(self.RXgain_dB) * dBm2mW(tx.power) * get_FS_pathloss(tx.distance, carrier)
-
-                # write header
-                if fh < tx.numHeaders:
-                    endTime = time + self.headerSlots
-                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += (self.header * RXpower)
-
-                # write fragment
-                else:
-                    endTime = time + self.timeGranularity
-                    collision_matrix[tx.ocw, startFreq : endFreq, time : endTime] += (self.fragment * RXpower)
-                
-                time = endTime
-
-        #return collision_matrix
-        return mW2dBm(collision_matrix)
-    
 
     ##################################
     # FHS SEARCH FOR HEADERLESS DECODE
     ##################################
             
-    def generate_Tt_M(self):
+    def generate_Tt_M(self, power: bool, dynamic: bool):
 
         # create tx list in the form (time, seqid, seqlength)
         transmissions = self.get_transmissions()
@@ -287,16 +224,15 @@ class LoRaNetwork():
             Tt.append((tx.startSlot, tx.seqid)) # , len(tx.sequence), ds
         
         # create binary received matrix
-        collision_matrix = self.get_dynamicdoppler_collision_matrix(transmissions)
-        #collision_matrix = self.get_staticdoppler_collision_matrix(transmissions)
+        collision_matrix = self.get_rcvM(transmissions, power, dynamic)
         collision_matrix[collision_matrix > 1] = 1 # binary recv matrix
 
         return Tt, collision_matrix[0]
     
 
-    def exhaustive_search(self):
+    def exhaustive_search(self, power: bool, dynamic: bool):
 
-        Tt, RXbinary_matrix = self.generate_Tt_M()
+        Tt, RXbinary_matrix = self.generate_Tt_M(power, dynamic)
         self.fhsLocator.set_RXmatrix(RXbinary_matrix)
 
         start = time.time()

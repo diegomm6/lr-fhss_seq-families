@@ -1,6 +1,6 @@
 import numpy as np
-from src.base.Event import *
 from src.base.Processor import Processor
+from src.base.LoRaTransmission import LoRaTransmission
 
 class LoRaGateway():
 
@@ -8,9 +8,13 @@ class LoRaGateway():
     A class for decoding LoRa transmissions.
 
     Args:
-        granularity (int): The granularity of the decoding process, in seconds.
         CR (int): The coding rate of the LoRa transmissions.
-        numDecoders (int): The number of decoders in the gateway.
+        timeGranularity (int): number of time slots per fragment.
+        freqGranularity (int): number of frequency slots per OBW.
+        use_earlydrop (bool): early drop mechanism flag.
+        use_earlydecode (bool): early decode mechanism flag.
+        use_headerdrop (bool): header drop mechanism flag.
+        numDecoders (int): number of decoders/processors in the gateway.
 
     Attributes:
         _processors (list[Processor]): A list of processors that handle decoding of LoRa transmissions.
@@ -21,14 +25,14 @@ class LoRaGateway():
         get_collided_packets(): Return total collided packets.
         get_decoded_packets(): Return total successfully decoded packets.
         get_decoded_bytes(): Return total successfully decoded bytes.
-        run(list[AbstractEvent]): Execute all given events.
+        run(list[AbstractEvent]): Decode given list of transmissions.
     """
 
     def __init__(self, CR: int, timeGranularity: int, freqGranularity: int, use_earlydrop: bool, 
-                 use_earlydecode: bool, use_headerdrop: bool, numDecoders: int) -> None:
+                 use_earlydecode: bool, use_headerdrop: bool, numDecoders: int, baseFreq: int) -> None:
         self.numDecoders = numDecoders
-        self._processors = [Processor(CR, timeGranularity, freqGranularity, use_earlydrop, 
-                                      use_earlydecode, use_headerdrop) for _ in range(numDecoders)]
+        self._processors = [Processor(CR, timeGranularity, freqGranularity, use_earlydrop, use_earlydecode,
+                                      use_headerdrop, baseFreq) for _ in range(numDecoders)]
     
 
     def restart(self) -> None:
@@ -121,18 +125,14 @@ class LoRaGateway():
         return collided_hdr_pld
     
 
-    def run(self, transmissions: list[LoRaTransmission], collision_matrix: np.ndarray) -> None:
+    def run(self, transmissions: list[LoRaTransmission],
+            collision_matrix: np.ndarray, dynamic: bool) -> None:
 
         freeUpTimes = np.zeros(self.numDecoders)
-
         for tx in transmissions:
-
             for i, fut in enumerate(freeUpTimes):
 
                 if tx.startSlot >= fut:
                     processor = self._processors[i]
-                    #freeUpTimes[i] = processor.decode(tx, collision_matrix)
-                    freeUpTimes[i] = processor.decode_PowerBased(tx, collision_matrix)
+                    freeUpTimes[i] = processor.decode(tx, collision_matrix, dynamic)
                     break
-
-
