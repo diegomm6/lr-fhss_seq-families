@@ -79,6 +79,7 @@ class Processor():
         self.decoded_hdr = 0      # case 3
         self.decodable_pld = 0    # case 2
         self.collided_hdr_pld = 0 # case 4
+        self.decoded = []
         self.decoded_headers = []
 
 
@@ -127,7 +128,7 @@ class Processor():
         return (collidedslots/timeslots) > self.symbolThreshold
     
 
-    def pre_decode_headers(self, tx: LoRaTransmission, rcvM: np.ndarray, dynamic: bool) -> int:
+    def predecode_headers(self, tx: LoRaTransmission, rcvM: np.ndarray, dynamic: bool) -> int:
 
         collided_headers = 0
         dopplershift = round(tx.dopplerShift[0] / self.freqPerSlot)
@@ -164,6 +165,8 @@ class Processor():
 
         if collided_headers < tx.numHeaders:
             self.decoded_headers.append(tx)
+        
+        return endTime
 
 
     def decode(self, tx: LoRaTransmission, rcvM: np.ndarray, dynamic: bool) -> int:

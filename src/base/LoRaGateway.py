@@ -42,10 +42,19 @@ class LoRaGateway():
         processor : Processor
         for processor in self._processors:
             processor.reset()
+
+    def get_decoded_headers(self) -> list[LoRaTransmission]:
+        """
+        Return decoded headers
+        """
+        decoded = []
+        for processor in self._processors:
+            decoded += processor.decoded_headers
+        return decoded
         
     def get_decoded(self) -> list:
         """
-        Return decoded transmissiond, 1 means decoded payload
+        Return decoded transmissions, 1 means decoded payload
         """
         decoded = []
         for processor in self._processors:
@@ -125,8 +134,8 @@ class LoRaGateway():
         return collided_hdr_pld
     
 
-    def run(self, transmissions: list[LoRaTransmission],
-            collision_matrix: np.ndarray, dynamic: bool) -> None:
+    def predecode(self, transmissions: list[LoRaTransmission], 
+                  rcvM: np.ndarray, dynamic: bool) -> None:
 
         freeUpTimes = np.zeros(self.numDecoders)
         for tx in transmissions:
@@ -134,5 +143,18 @@ class LoRaGateway():
 
                 if tx.startSlot >= fut:
                     processor = self._processors[i]
-                    freeUpTimes[i] = processor.decode(tx, collision_matrix, dynamic)
+                    freeUpTimes[i] = processor.predecode_headers(tx, rcvM, dynamic)
+                    break
+
+
+    def run(self, transmissions: list[LoRaTransmission],
+            rcvM: np.ndarray, dynamic: bool) -> None:
+
+        freeUpTimes = np.zeros(self.numDecoders)
+        for tx in transmissions:
+            for i, fut in enumerate(freeUpTimes):
+
+                if tx.startSlot >= fut:
+                    processor = self._processors[i]
+                    freeUpTimes[i] = processor.decode(tx, rcvM, dynamic)
                     break

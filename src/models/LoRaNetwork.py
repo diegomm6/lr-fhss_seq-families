@@ -55,6 +55,8 @@ class LoRaNetwork():
         startLimit = simTime - max_packet_duration
         self.nodes = [LoRaNode(i, CR, numOCW, startLimit) for i in range(numNodes)]
 
+        self.TXset = self.set_transmissions()
+
         # add support for multiple gateways in the future
         self.gateway = LoRaGateway(CR, timeGranularity, freqGranularity, use_earlydrop, use_earlydecode,
                                    use_headerdrop, numDecoders, self.baseFreq, collision_method)
@@ -85,7 +87,7 @@ class LoRaNetwork():
             raise Exception(f"Invalid family name '{familyname}'")
         
 
-    def get_transmissions(self) -> list[LoRaTransmission]:
+    def set_transmissions(self) -> list[LoRaTransmission]:
 
         transmissions = []
         node : LoRaNode
@@ -97,14 +99,16 @@ class LoRaNetwork():
 
         return sorted_txs
     
+
     def run(self, power: bool, dynamic: bool) -> None:
-        transmissions = self.get_transmissions()
-        collision_matrix = self.get_rcvM(transmissions, power, dynamic)
-        self.gateway.run(transmissions, collision_matrix, dynamic)
+        collision_matrix = self.get_rcvM(self.TXset, power, dynamic)
+        self.gateway.run(self.TXset, collision_matrix, dynamic)
+
 
     def restart(self) -> None:
 
         self.gateway.restart()
+        self.TXset = self.set_transmissions()
 
         node : LoRaNode
         for node in self.nodes:
@@ -169,71 +173,65 @@ class LoRaNetwork():
                 time = endTime
 
         return rcvM
-    
-
-    def get_decoded_matrix(self, binary : bool) -> np.ndarray:
-        """
-        Create decode matrix from decoded transmissions set
-        MUST be used after run(), otherwise there will be no decoded txs
-        """
-
-        decoded_matrix = np.zeros((self.numOCW, self.frequencySlots, self.simTime))
-
-        decoded = self.gateway.get_decoded()
-        tx : LoRaTransmission
-        for tx, pld_status in decoded:
-
-            staticShift = self.baseFreq + round(tx.dopplerShift[0] / self.freqPerSlot)
-
-            time = tx.startSlot
-            for fh, obw in enumerate(tx.sequence):
-
-                startFreq = staticShift + obw * self.freqGranularity
-                endFreq = startFreq + self.freqGranularity
-
-                # write header
-                if fh < tx.numHeaders:
-                    endTime = time + self.headerSlots
-                    decoded_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.header
-
-                # write fragment
-                else:
-                    endTime = time + self.timeGranularity
-                    decoded_matrix[tx.ocw, startFreq : endFreq, time : endTime] += self.fragment
-                
-                time = endTime
-        
-        if binary:
-            decoded_matrix[decoded_matrix > 1] = 1
-
-        return decoded_matrix
 
 
     ##################################
     # FHS SEARCH FOR HEADERLESS DECODE
     ##################################
+
+    def get_predecoded_data(self):
+
+        # get TXset and rcvd matrix
+        transmissions = self.TXset
+        count_dynamic_rcvM = self.get_rcvM(transmissions, power=False, dynamic=True)
+
+        # predecode headers
+        self.gateway.predecode(transmissions, count_dynamic_rcvM, dynamic=True)
+        decoded_headers = self.gateway.get_decoded_headers()
+        decoded_m = self.get_rcvM(decoded_headers, power=False, dynamic=True)
+
+        # 3-value - noise (0), signal (1), interference (2)
+        value3_matrix = count_dynamic_rcvM.copy()[0]
+        value3_matrix[value3_matrix > 2] = 2
+
+        # interference, noise/signal (0), interference (2)
+        interference = count_dynamic_rcvM.copy()[0]
+        interference[interference > 2] = 2
+        interference[interference < 2] = 0
+
+        # detected/received difference matrix
+        diff = np.subtract(value3_matrix, decoded_m[0])
+        diff = np.add(diff, interference)
+        diff[diff > 1] = 1
+
+        collided_TXset = self.get_collided_TXset()
+
+        return collided_TXset, diff
+    
+
+    def get_collided_TXset(self) -> list[LoRaTransmission]:
+
+        TXsetids = [tx.id for tx in self.TXset]
+        decoded_headers = self.gateway.get_decoded_headers()
+        decoded_headers_ids = [tx.id for tx in decoded_headers]
+
+        collidedTXset = []
+        for i, txid in enumerate(TXsetids):
+            if txid not in decoded_headers_ids:
+                collidedTXset.append(self.TXset[i])
+        
+        return collidedTXset
+
             
-    def generate_Tt_M(self, power: bool, dynamic: bool):
+    def exhaustive_search(self, transmissions: list[LoRaTransmission], rcvM: np.ndarray):
 
         # create tx list in the form (time, seqid, seqlength)
-        transmissions = self.get_transmissions()
         Tt = []
-        tx : LoRaTransmission
         for tx in transmissions:
             ds = round(tx.dopplerShift[0] / self.freqPerSlot)
             Tt.append((tx.startSlot, tx.seqid)) # , len(tx.sequence), ds
         
-        # create binary received matrix
-        collision_matrix = self.get_rcvM(transmissions, power, dynamic)
-        collision_matrix[collision_matrix > 1] = 1 # binary recv matrix
-
-        return Tt, collision_matrix[0]
-    
-
-    def exhaustive_search(self, power: bool, dynamic: bool):
-
-        Tt, RXbinary_matrix = self.generate_Tt_M(power, dynamic)
-        self.fhsLocator.set_RXmatrix(RXbinary_matrix)
+        self.fhsLocator.set_RXmatrix(rcvM)
 
         start = time.time()
         Tp = self.fhsLocator.create_Tp_parallel(self.FHSfam.FHSfam)

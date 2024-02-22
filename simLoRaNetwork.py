@@ -8,7 +8,7 @@ from src.models.LoRaNetwork import LoRaNetwork
 from src.base.base import cornerdetect, dBm2mW, mW2dBm, get_FS_pathloss
 import time
 
-def get_RXmatrix():
+def plot_rcvM():
 
     simTime = 500
     numOCW = 1
@@ -16,65 +16,84 @@ def get_RXmatrix():
     numGrids = 8
     timeGranularity = 6
     freqGranularity = 25
-    numDecoders = 100
+    numDecoders = 500
     CR = 1
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
-    familyname = "driver"
-    numNodes = 5
-    collision_method = "SINR"
+    familyname = "driver" # driver - lifan
+    numNodes = 300
+    collision_method = "strict" # strict - SINR
 
     random.seed(0)
-
     network = LoRaNetwork(numNodes, familyname, numOCW, numOBW, numGrids, CR, timeGranularity,
                           freqGranularity, simTime, numDecoders, use_earlydecode, use_earlydrop,
                           use_headerdrop, collision_method)
 
-    transmissions = network.get_transmissions()
-
+    transmissions = network.TXset
     count_static_rcvM = network.get_rcvM(transmissions, power=False, dynamic=False)
     count_dynamic_rcvM = network.get_rcvM(transmissions, power=False, dynamic=True)
     power_dynamic_rcvM = network.get_rcvM(transmissions, power=True, dynamic=True)
 
-    network.gateway.run(transmissions, power_dynamic_rcvM, True)
-    decoded_m = network.get_decoded_matrix(binary=False)
+    network.gateway.predecode(transmissions, count_dynamic_rcvM, dynamic=True)
+    decoded_headers = network.gateway.get_decoded_headers()
+    decoded_m = network.get_rcvM(decoded_headers, power=False, dynamic=True)
 
-    # binary
+    network.gateway.run(transmissions, count_dynamic_rcvM, dynamic=True)
+
+
+    def print_m(m, save):
+        fslots, tslots = count_static_rcvM[0].shape
+        tmax =  round(tslots * (102.4/timeGranularity) / 1000)
+        fmax = round(fslots * (488.28125/freqGranularity) / 1000)
+        fig = plt.figure(figsize=(18,12))
+        im = plt.imshow(m, extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto') # mW2dBm(power_dynamic_rcvM[0] /488)
+        fig.colorbar(im)
+        plt.title(f'Spectogram of received signals [dB/Hz], {numNodes} txs, 1 OCW channel')
+        plt.xlabel('s')
+        plt.ylabel('kHz')
+        #plt.show()
+        plt.savefig(save)
+        plt.close('all')
+
+
+    # binary - noise (0), signal/interference (1)
     binary_matrix = count_dynamic_rcvM.copy()[0]
     binary_matrix[binary_matrix > 1] = 1
 
-    # 3-value
+    # 3-value - noise (0), signal (1), interference (2)
     value3_matrix = count_dynamic_rcvM.copy()[0]
     value3_matrix[value3_matrix > 2] = 2
+
+    # interference, noise/signal (0), interference (2)
+    interference = count_dynamic_rcvM.copy()[0]
+    interference[interference > 2] = 2
+    interference[interference < 2] = 0
+
+    # 3-value decoded headers signals
+    decoded_m[decoded_m > 2] = 2
 
     # corner
     cornerm = cornerdetect(count_static_rcvM[0])
     cornerhighlight = np.add(count_static_rcvM[0], cornerm)
 
     # detected/received difference matrix
-    #diff = np.subtract(count_static_rcvM, decoded_m)
+    diff = np.subtract(value3_matrix, decoded_m[0])
+    diff = np.add(diff, interference)
+    diff[diff > 2] = 2
 
-    fslots, tslots = count_static_rcvM[0].shape
-    tmax =  round(tslots * (102.4/timeGranularity) / 1000)
-    fmax = round(fslots * (488.28125/freqGranularity) / 1000)
-    fig = plt.figure(figsize=(18,12))
-    im = plt.imshow(mW2dBm(power_dynamic_rcvM[0] /488), extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto') # mW2dBm(power_dynamic_rcvM[0] /488)
-    fig.colorbar(im)
-    plt.title(f'Spectogram of received signals [dB/Hz], {numNodes} txs, 1 OCW channel')
-    plt.xlabel('s')
-    plt.ylabel('kHz')
-    plt.show()
-    #plt.savefig('transmissions-driver.png')
-    plt.close('all')
+    # received power
+    spec_density = mW2dBm(power_dynamic_rcvM[0] /488)
+
+    print(len(decoded_headers))
+    print_m(value3_matrix, '3valuem.png')
+    print_m(decoded_m[0], 'decoded.png')
+    print_m(diff, 'difference.png')
 
 
 def get_simdata(v):
 
-    power = True
-    dynamic = False
-
-    runs = 10
+    runs = 1
     simTime = 500
     numOCW = 1
     numOBW = 280
@@ -86,8 +105,11 @@ def get_simdata(v):
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
-    familyname = "driver"
-    collision_method = "SINR"
+    familyname = "driver" # driver - lifan
+
+    power = True
+    dynamic = True # NO SUPPORT FOR STATIC DOPPLER IN exhaustive search
+    collision_method = "strict" # strict - SINR
 
     numNodes = int(v)
 
@@ -109,6 +131,8 @@ def get_simdata(v):
     for r in range(runs):
         random.seed(2*r)
 
+        collided_TXset, diff = network.get_predecoded_data()
+
         network.run(power, dynamic)
         avg_tracked_txs += network.get_tracked_txs()
         avg_header_drop_packets += network.get_header_drop_packets()
@@ -117,7 +141,11 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
-        tp, fp, fn, _time = 0,0,0,0 #network.exhaustive_search(power, dynamic)
+
+        tp, fp, fn, _time = 0,0,0,0
+        if len(collided_TXset):
+            tp, fp, fn, _time = network.exhaustive_search(collided_TXset, diff) # 0,0,0,0
+
         avg_tp += tp
         avg_fp += fp
         avg_fn += fn
@@ -136,17 +164,16 @@ def runsim():
 
     print('driver \tCR = 1\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 4.0, num=15) # np.logspace(1.0, 3.0, num=40)
+    netSizes = np.logspace(1.0, 3.0, num=10) # np.logspace(1.0, 3.0, num=40)
     #netSizes = [50]
 
-    #pool = Pool(processes = 20)
+    # parallel simulation available when NOT USING parallel FHSlocator
+    #pool = Pool(processes = 10)
     #result = pool.map(get_simdata, netSizes)
     #pool.close()
     #pool.join()
 
-    result = []
-    for nodes in netSizes:
-        result.append(get_simdata(nodes))
+    result = [get_simdata(nodes) for nodes in netSizes]
 
     basestr = 'nodrop-cr1-500p-'
     print(basestr+'tracked_txs,', [round(i[0],6) for i in result])
@@ -164,5 +191,5 @@ def runsim():
 
 if __name__ == "__main__":
 
-    #get_RXmatrix()
+    #plot_rcvM()
     runsim()
