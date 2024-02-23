@@ -2,17 +2,27 @@ import random
 import numpy as np
 
 EARTRH_G    = 9.80665      # earth gravitational constant in m/s2
-EARTRH_R    = 6371000      # earth radius in m
-SAT_H       = 600000       # satellite altitude in m
-SAT_RANGE   = 1500000      # satellite comm max range in m
-HDR_TIME    = 0.233472     # seconds
-FRG_TIME    = 0.1024       # seconds
+EARTRH_R    = 6371000      # earth radius in meters
+SAT_H       = 600000       # satellite altitude in meters
+SAT_RANGE   = 1500000      # satellite comm max range in meters
+HDR_TIME    = 0.233472     # header time in seconds
+FRG_TIME    = 0.1024       # fragment time in seconds
 OBW_BW      = 488.28125    # OBW bandwidth in Hz
 OCW_RX_BW   = 200000       # OCW receiver bandwidth in Hz
 OCW_FC      = 868100000    # OCW channel carrier freq
 GAIN_TX     = 2.5          # transmitter antenna gain in db
 GAIN_RX     = 22.6         # receiver antenna gain in db
-AWGN_VAR_DB = 10*np.log10(OBW_BW) - 168 # AWGN variance in db (-174 + 6)
+TX_PWR_DB   = 30           # transmission power in dbm
+
+TH2         = 0            # SINR collision determination threshold in dB
+SYM_THRESH  = 0.2          # symbol collision threshold per hdr/frg in %
+
+MIN_FRGS    = 8            # minimum number of payload fragments
+MAX_FRGS    = 31           # maximum number of payload fragments
+MAX_HDRS    = 3            # maximum number of headers
+
+AWGN_VAR_DB = -174 + 6 + 10*np.log10(OBW_BW)          # AWGN variance in db (-174 + 6)
+MAX_FRM_TM  =  MAX_HDRS*HDR_TIME + MAX_FRGS*FRG_TIME  # maximum lr-fhss frame time in sec
 
 
 # Obtain minimal gap between adyacent values for sequence X

@@ -2,9 +2,6 @@ import numpy as np
 from src.base.base import *
 from src.base.LoRaTransmission import LoRaTransmission
 
-import seaborn as sns
-import matplotlib.pyplot as plt
-
 class Processor():
     """
     A class for decoding LoRa transmissions. Processor / Demodulator
@@ -53,6 +50,8 @@ class Processor():
         self.use_headerdrop = use_headerdrop
         self.baseFreq = baseFreq
         self.collision_method = collision_method
+        self.th2 = TH2
+        self.symbolThreshold = SYM_THRESH
 
         self.tracked_txs = 0
         self.decoded_bytes = 0
@@ -63,9 +62,6 @@ class Processor():
         self.collided_hdr_pld = 0 # case 4
         self.decoded = []
         self.decoded_headers = []
-
-        self.th2 = 0
-        self.symbolThreshold = 0.2
 
 
     def reset(self) -> None:

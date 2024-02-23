@@ -37,8 +37,8 @@ class LoRaNode():
         self.startLimit = startLimit
         self.sent_packets = 0
         self.sent_payload_bytes = 0
-
-        self.TXpower = 30 # dBm, approx 25 mW
+        self.TXpower_dB = TX_PWR_DB
+        self.maxFrameT = MAX_FRM_TM
 
 
     def restart(self) -> None:
@@ -62,19 +62,16 @@ class LoRaNode():
 
     def calculate_hdr_frg_times(self, time, numHeaders, numFragments) -> list[float]:
 
-        headertime = 0.233472
-        fragmenttime = 0.1024
-        hdr_frg_times = []
-
         # doppler shift decreases as the satellites moves as seeen from the nodes
+        hdr_frg_times = []
 
         for hdr in range(numHeaders):
             hdr_frg_times.append(time)
-            time -= headertime
+            time -= HDR_TIME
 
         for frg in range(numFragments):
             hdr_frg_times.append(time)
-            time -= fragmenttime
+            time -= FRG_TIME
 
         return hdr_frg_times
     
@@ -109,16 +106,16 @@ class LoRaNode():
         self.sent_packets += 1
         self.sent_payload_bytes += payload_size
 
-        d = random.uniform(SAT_H, SAT_RANGE)
-        tau = get_visibility_time(d)
-        maxFrameTime = 3.8
-        time = random.uniform(-tau+maxFrameTime, tau-maxFrameTime)
+        dis2sat = random.uniform(SAT_H, SAT_RANGE)
+        tau = get_visibility_time(dis2sat)
+        
+        time = random.uniform(-tau+self.maxFrameT, tau-self.maxFrameT)
 
         hdr_frg_times = self.calculate_hdr_frg_times(time, numHeaders, numFragments)
         dynamicDoppler = [dopplerShift(t) for t in hdr_frg_times]
         #staticDoppler = [0 for t in hdr_frg_times]
 
-        tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders, payload_size,
-                              numFragments, sequence, seqid, d, dynamicDoppler, self.TXpower)
+        tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders, payload_size, numFragments,
+                              sequence, seqid, dis2sat, dynamicDoppler, self.TXpower_dB)
 
         return [tx]

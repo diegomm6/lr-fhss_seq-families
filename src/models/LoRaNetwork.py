@@ -51,7 +51,7 @@ class LoRaNetwork():
         # INTIALIZE NETWORK MODULES
         ###########################
 
-        max_packet_duration = 31 * timeGranularity + 3 * self.headerSlots
+        max_packet_duration = MAX_HDRS * self.headerSlots + MAX_FRGS * timeGranularity
         startLimit = simTime - max_packet_duration
         self.nodes = [LoRaNode(i, CR, numOCW, startLimit) for i in range(numNodes)]
 

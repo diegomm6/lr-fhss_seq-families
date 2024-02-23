@@ -5,7 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from src.models.LoRaNetwork import LoRaNetwork
-from src.base.base import cornerdetect, dBm2mW, mW2dBm, get_FS_pathloss
+from src.base.base import *
 import time
 
 def plot_rcvM():
@@ -22,7 +22,7 @@ def plot_rcvM():
     use_earlydrop = True
     use_headerdrop = False
     familyname = "driver" # driver - lifan
-    numNodes = 300
+    numNodes = 5
     collision_method = "strict" # strict - SINR
 
     random.seed(0)
@@ -42,10 +42,10 @@ def plot_rcvM():
     network.gateway.run(transmissions, count_dynamic_rcvM, dynamic=True)
 
 
-    def print_m(m, save):
+    def print_m(m, save='a.png'):
         fslots, tslots = count_static_rcvM[0].shape
-        tmax =  round(tslots * (102.4/timeGranularity) / 1000)
-        fmax = round(fslots * (488.28125/freqGranularity) / 1000)
+        tmax =  round(tslots * (FRG_TIME/timeGranularity))
+        fmax = round(fslots * (OBW_BW/freqGranularity) / 1000)
         fig = plt.figure(figsize=(18,12))
         im = plt.imshow(m, extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto') # mW2dBm(power_dynamic_rcvM[0] /488)
         fig.colorbar(im)
@@ -89,6 +89,7 @@ def plot_rcvM():
     print_m(value3_matrix, '3valuem.png')
     print_m(decoded_m[0], 'decoded.png')
     print_m(diff, 'difference.png')
+    #print_m(spec_density)
 
 
 def get_simdata(v):
@@ -107,7 +108,7 @@ def get_simdata(v):
     use_headerdrop = False
     familyname = "driver" # driver - lifan
 
-    power = True
+    power = False
     dynamic = True # NO SUPPORT FOR STATIC DOPPLER IN exhaustive search
     collision_method = "strict" # strict - SINR
 
@@ -164,8 +165,8 @@ def runsim():
 
     print('driver \tCR = 1\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 3.0, num=10) # np.logspace(1.0, 3.0, num=40)
-    #netSizes = [50]
+    #netSizes = np.logspace(1.0, 3.0, num=10) # np.logspace(1.0, 3.0, num=40)
+    netSizes = [5]
 
     # parallel simulation available when NOT USING parallel FHSlocator
     #pool = Pool(processes = 10)
@@ -192,4 +193,8 @@ def runsim():
 if __name__ == "__main__":
 
     #plot_rcvM()
-    runsim()
+    #runsim()
+
+    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 3.0, num=40)
+    x = [int(n) for n in netSizes]
+    print(x)
