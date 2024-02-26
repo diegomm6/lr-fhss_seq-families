@@ -10,6 +10,8 @@ import time
 
 def plot_rcvM():
 
+    numNodes = 50
+
     simTime = 500
     numOCW = 1
     numOBW = 280
@@ -22,7 +24,6 @@ def plot_rcvM():
     use_earlydrop = True
     use_headerdrop = False
     familyname = "driver" # driver - lifan
-    numNodes = 5
     collision_method = "strict" # strict - SINR
 
     random.seed(0)
@@ -85,16 +86,19 @@ def plot_rcvM():
     # received power
     spec_density = mW2dBm(power_dynamic_rcvM[0] /488)
 
-    print(len(decoded_headers))
-    print_m(value3_matrix, '3valuem.png')
-    print_m(decoded_m[0], 'decoded.png')
-    print_m(diff, 'difference.png')
-    #print_m(spec_density)
+    ch_occupancy = network.get_OCWchannel_occupancy(binary_matrix)
+    print(ch_occupancy)
+
+    print_m(binary_matrix, 'bin.png')
+    #print_m(value3_matrix, '3value.png')
+    #print_m(decoded_m[0], 'dcdd.png')
+    #print_m(diff, 'diff.png')
+    #print_m(spec_density, 'spec.png')
 
 
 def get_simdata(v):
 
-    runs = 1
+    runs = 10
     simTime = 500
     numOCW = 1
     numOBW = 280
@@ -106,7 +110,7 @@ def get_simdata(v):
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
-    familyname = "driver" # driver - lifan
+    familyname = "lifan" # driver - lifan
 
     power = False
     dynamic = True # NO SUPPORT FOR STATIC DOPPLER IN exhaustive search
@@ -129,11 +133,13 @@ def get_simdata(v):
     avg_fp = 0
     avg_fn = 0
     avg_time = 0
+
+    ch_occ = 0
     for r in range(runs):
         random.seed(2*r)
-
+    
         collided_TXset, diff = network.get_predecoded_data()
-
+        
         network.run(power, dynamic)
         avg_tracked_txs += network.get_tracked_txs()
         avg_header_drop_packets += network.get_header_drop_packets()
@@ -142,6 +148,7 @@ def get_simdata(v):
         avg_decoded_hdr += network.get_decoded_hdr()
         avg_decodable_pld += network.get_decodable_pld()
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
+        ch_occ += network.get_OCWchannel_occupancy()
 
         tp, fp, fn, _time = 0,0,0,0
         if len(collided_TXset):
@@ -150,23 +157,25 @@ def get_simdata(v):
         avg_tp += tp
         avg_fp += fp
         avg_fn += fn
-        avg_time += _time 
+        avg_time += _time
+        
         network.restart()
+
 
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
          avg_decoded_hrd_pld / runs, avg_decoded_hdr / runs, avg_decodable_pld / runs,
-         avg_collided_hdr_pld / runs, avg_tp / runs, avg_fp / runs, avg_fn / runs, avg_time / runs]
-
+         avg_collided_hdr_pld / runs, avg_tp / runs, avg_fp / runs, avg_fn / runs, avg_time / runs, ch_occ / runs]
+    
     print(f"{numNodes}", x)
     return x
 
 
 def runsim():
 
-    print('driver \tCR = 1\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
+    print('lifan \tCR = 1\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
 
-    #netSizes = np.logspace(1.0, 3.0, num=10) # np.logspace(1.0, 3.0, num=40)
-    netSizes = [5]
+    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 3.0, num=40)
+    #netSizes = [5]
 
     # parallel simulation available when NOT USING parallel FHSlocator
     #pool = Pool(processes = 10)
@@ -175,8 +184,8 @@ def runsim():
     #pool.join()
 
     result = [get_simdata(nodes) for nodes in netSizes]
-
-    basestr = 'nodrop-cr1-500p-'
+    
+    basestr = 'cr1-800p-31frg-'
     print(basestr+'tracked_txs,', [round(i[0],6) for i in result])
     print(basestr+'header_drop_packets,', [round(i[1],6) for i in result])
     print(basestr+'decoded_bytes,', [round(i[2],6) for i in result])
@@ -188,13 +197,10 @@ def runsim():
     print(basestr+'fp,', [round(i[8],6) for i in result])
     print(basestr+'fn,', [round(i[9],6) for i in result])
     print(basestr+'time,', [round(i[10],6) for i in result])
+    print(basestr+'ch_occupancy,', [round(i[11],6) for i in result])
     
 
 if __name__ == "__main__":
 
     #plot_rcvM()
-    #runsim()
-
-    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 3.0, num=40)
-    x = [int(n) for n in netSizes]
-    print(x)
+    runsim()

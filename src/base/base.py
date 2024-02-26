@@ -21,7 +21,7 @@ MIN_FRGS    = 8            # minimum number of payload fragments
 MAX_FRGS    = 31           # maximum number of payload fragments
 MAX_HDRS    = 3            # maximum number of headers
 
-AWGN_VAR_DB = -174 + 6 + 10*np.log10(OBW_BW)          # AWGN variance in db (-174 + 6)
+AWGN_VAR_DB = -174 + 6 + 10*np.log10(OBW_BW)          # AWGN variance in db
 MAX_FRM_TM  =  MAX_HDRS*HDR_TIME + MAX_FRGS*FRG_TIME  # maximum lr-fhss frame time in sec
 
 

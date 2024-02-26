@@ -173,6 +173,24 @@ class LoRaNetwork():
                 time = endTime
 
         return rcvM
+    
+
+    def get_OCWchannel_occupancy(self) -> float:
+
+        transmissions = self.TXset
+        count_dynamic_rcvM = self.get_rcvM(transmissions, power=False, dynamic=True)[0]
+        count_dynamic_rcvM[count_dynamic_rcvM > 1] = 1
+
+        fslots, tslots = count_dynamic_rcvM.shape
+
+        filered_recvM = count_dynamic_rcvM[:, int(tslots/2 - tslots/4) : int(tslots/2 + tslots/4)]
+
+        perFreqSlot_occ = np.mean(filered_recvM, axis=1)
+
+        # ignore unused channels
+        unused_ch = len(np.where(perFreqSlot_occ == 0)[0])
+
+        return np.sum(perFreqSlot_occ) / (fslots - unused_ch)
 
 
     ##################################
