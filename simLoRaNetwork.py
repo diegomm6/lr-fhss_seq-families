@@ -106,7 +106,7 @@ def get_simdata(v):
     timeGranularity = 6
     freqGranularity = 25
     numDecoders = 800
-    CR = 1
+    CR = 2
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
@@ -172,7 +172,7 @@ def get_simdata(v):
 
 def runsim():
 
-    print('lifan \tCR = 1\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
+    print('lifan \tCR = 2\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
 
     netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 3.0, num=40)
     #netSizes = [5]
@@ -185,7 +185,7 @@ def runsim():
 
     result = [get_simdata(nodes) for nodes in netSizes]
     
-    basestr = 'cr1-800p-31frg-'
+    basestr = 'cr2-800p-'
     print(basestr+'tracked_txs,', [round(i[0],6) for i in result])
     print(basestr+'header_drop_packets,', [round(i[1],6) for i in result])
     print(basestr+'decoded_bytes,', [round(i[2],6) for i in result])

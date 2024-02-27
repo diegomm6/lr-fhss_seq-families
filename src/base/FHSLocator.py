@@ -21,7 +21,7 @@ class FHSLocator():
         self.fragmentSize = timeGranularity * freqGranularity # time-freq frg size
 
         self.receivedMatrix = np.zeros(1)
-        self.min_seqlength = 11 # CHANGE HERE FOR DIFFERENT CR
+        self.min_seqlength = 10 # CHANGE HERE FOR DIFFERENT CR cr1=11
 
         maxtau = get_visibility_time(SAT_RANGE)
         self.T = np.linspace(-maxtau, maxtau, 100*simTime)
