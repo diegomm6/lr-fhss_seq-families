@@ -40,7 +40,7 @@ def plot_rcvM():
     decoded_headers = network.gateway.get_decoded_headers()
     decoded_m = network.get_rcvM(decoded_headers, power=False, dynamic=True)
 
-    network.gateway.run(transmissions, count_dynamic_rcvM, dynamic=True)
+    network.gateway.run(transmissions, count_static_rcvM, dynamic=False)
 
 
     def print_m(m, save='a.png'):
@@ -53,8 +53,8 @@ def plot_rcvM():
         plt.title(f'Spectogram of received signals [dB/Hz], {numNodes} txs, 1 OCW channel')
         plt.xlabel('s')
         plt.ylabel('kHz')
-        plt.show()
-        #plt.savefig(save)
+        #plt.show()
+        plt.savefig(save)
         plt.close('all')
 
 
@@ -86,12 +86,12 @@ def plot_rcvM():
     # received power
     spec_density = mW2dBm(power_dynamic_rcvM[0] /488)
 
-    print(network.get_OCWchannel_occupancy())
+    #print(network.get_OCWchannel_occupancy())
 
-    #print_m(binary_matrix, 'bin.png')
-    #print_m(value3_matrix, '3value.png')
-    #print_m(decoded_m[0], 'dcdd.png')
-    #print_m(diff, 'diff.png')
+    print_m(binary_matrix, 'bin.png')
+    print_m(value3_matrix, '3value.png')
+    print_m(decoded_m[0], 'dcdd.png')
+    print_m(diff, 'diff.png')
     print_m(spec_density, 'spec.png')
 
 
@@ -104,7 +104,7 @@ def get_simdata(v):
     numGrids = 8
     timeGranularity = 6
     freqGranularity = 25
-    numDecoders = 100
+    numDecoders = 800
     CR = 1
     use_earlydecode = True
     use_earlydrop = True
@@ -112,7 +112,7 @@ def get_simdata(v):
     familyname = "driver" # driver - lifan
 
     power = False
-    dynamic = True # NO SUPPORT FOR STATIC DOPPLER IN exhaustive search
+    dynamic = False
     collision_method = "strict" # strict - SINR
 
     numNodes = int(v)
@@ -136,7 +136,7 @@ def get_simdata(v):
     for r in range(runs):
         random.seed(2*r)
     
-        #collided_TXset, diff = network.get_predecoded_data()
+        collided_TXset, diff = network.get_predecoded_data()
         
         network.run(power, dynamic)
         avg_tracked_txs += network.get_tracked_txs()
@@ -149,8 +149,8 @@ def get_simdata(v):
         ch_occ += network.get_OCWchannel_occupancy()
 
         tp, fp, fn, _time = 0,0,0,0
-        #if len(collided_TXset):
-        #    tp, fp, fn, _time = network.exhaustive_search(collided_TXset, diff) # 0,0,0,0
+        if len(collided_TXset):
+            tp, fp, fn, _time = network.exhaustive_search(collided_TXset, diff) # 0,0,0,0
 
         avg_tp += tp
         avg_fp += fp
@@ -172,7 +172,7 @@ def runsim():
 
     print('driver \tCR = 1\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(2.0, 4.0, num=20) # np.logspace(1.0, 3.0, num=40)
+    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 3.0, num=40)
     #netSizes = [100000]
 
     # parallel simulation available when NOT USING parallel FHSlocator

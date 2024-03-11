@@ -79,35 +79,26 @@ class FHSLocator():
         for t in range(self.simTime - self.max_packet_duration):
             for s, seq in enumerate(seqs):
 
-                possibleShift = []
-                for DS in range(-self.maxDopplerSlots, self.maxDopplerSlots, 1):
-
-                    fits, fitness = self.isPossibeShift(DS, t, seq)
-                    if fits:
-                        possibleShift.append(DS)
-                        break # select first possible Doppler Shift that fits seq s at time t
-
-                if len(possibleShift) > 0:
+                fits, fitness = self.isPossibeShift(t, seq)
+                if fits:
                     Tp.append((t, s+shift)) #fitness, possibleShift[0]
         
         return Tp
 
 
 
-    def isPossibeShift(self, staticShift, startTime, seq):
+    def isPossibeShift(self, startTime, seq):
         """
         Determines if a given sequence can fit in the received OCW channel
         for a given static doppler shift at the beginnig of the transmission 
         """
 
-        estDSidx = bisection(self.DS, staticShift * self.freqPerSlot)
-
         fitness = 0
         time = startTime
         for fh, obw in enumerate(seq):
 
-            startFreq = self.baseFreq + obw * self.freqGranularity + round(self.DS[estDSidx] / self.freqPerSlot) -1
-            endFreq = startFreq + self.freqGranularity +1
+            startFreq = self.baseFreq + obw * self.freqGranularity
+            endFreq = startFreq + self.freqGranularity
 
             # header
             if fh < self.numHeaders:
@@ -118,7 +109,6 @@ class FHSLocator():
                 if self.fits(header, True):
                     fitness += 1
                     time = endTime
-                    estDSidx -= self.DSperHdr
                 else:
                     return False, 0
         
@@ -131,7 +121,6 @@ class FHSLocator():
                 if self.fits(fragment, False):
                     fitness += 1
                     time = endTime
-                    estDSidx -= self.DSperFrg
                 else:
                     if fitness >= self.min_seqlength:
                         return True, fitness
