@@ -21,7 +21,7 @@ class FHSLocator():
         self.fragmentSize = timeGranularity * freqGranularity # time-freq frg size
 
         self.receivedMatrix = np.zeros(1)
-        self.min_seqlength = 10 # CHANGE HERE FOR DIFFERENT CR cr1=11
+        self.min_seqlength = 11 # CHANGE HERE FOR DIFFERENT CR cr1=11
 
         maxtau = get_visibility_time(SAT_RANGE)
         self.T = np.linspace(-maxtau, maxtau, 100*simTime)
@@ -168,34 +168,3 @@ class FHSLocator():
 
         return tp, fp, fn
     
-
-    def metric_processing(self, Tt, Tp):
-
-        Tt_nolength = [[t,s] for t,s,l in Tt]
-        Tp_nolength = [[t,s] for t,s,l in Tp]
-        
-        Tt_lengths = [l for t,s,l in Tt]
-        Tp_lengths = [l for t,s,l in Tp]
-
-        diff1 = 0
-        i=0
-        for tt in Tt_nolength:
-            if tt in Tp_nolength:
-                _id = Tp_nolength.index(tt)
-                if Tt_lengths[i] == Tp_lengths[_id]-1:
-                    diff1 += 1
-            i+=1
-
-        return diff1
-    
-    def metric_processing2(self, Tt, Tp):
-
-        Tt_nolength = [[t,s] for t,s,l in Tt]
-        Tp_nolength = [[t,s] for t,s,l in Tp]
-        
-        lengthmismatch = 0
-        for tt in Tt_nolength:
-            if tt in Tp_nolength:
-                lengthmismatch += 1
-
-        return lengthmismatch

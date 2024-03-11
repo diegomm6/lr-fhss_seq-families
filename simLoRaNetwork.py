@@ -10,7 +10,7 @@ import time
 
 def plot_rcvM():
 
-    numNodes = 50
+    numNodes = 250
 
     simTime = 500
     numOCW = 1
@@ -53,8 +53,8 @@ def plot_rcvM():
         plt.title(f'Spectogram of received signals [dB/Hz], {numNodes} txs, 1 OCW channel')
         plt.xlabel('s')
         plt.ylabel('kHz')
-        #plt.show()
-        plt.savefig(save)
+        plt.show()
+        #plt.savefig(save)
         plt.close('all')
 
 
@@ -86,14 +86,13 @@ def plot_rcvM():
     # received power
     spec_density = mW2dBm(power_dynamic_rcvM[0] /488)
 
-    ch_occupancy = network.get_OCWchannel_occupancy(binary_matrix)
-    print(ch_occupancy)
+    print(network.get_OCWchannel_occupancy())
 
-    print_m(binary_matrix, 'bin.png')
+    #print_m(binary_matrix, 'bin.png')
     #print_m(value3_matrix, '3value.png')
     #print_m(decoded_m[0], 'dcdd.png')
     #print_m(diff, 'diff.png')
-    #print_m(spec_density, 'spec.png')
+    print_m(spec_density, 'spec.png')
 
 
 def get_simdata(v):
@@ -105,12 +104,12 @@ def get_simdata(v):
     numGrids = 8
     timeGranularity = 6
     freqGranularity = 25
-    numDecoders = 800
-    CR = 2
+    numDecoders = 100
+    CR = 1
     use_earlydecode = True
     use_earlydrop = True
     use_headerdrop = False
-    familyname = "lifan" # driver - lifan
+    familyname = "driver" # driver - lifan
 
     power = False
     dynamic = True # NO SUPPORT FOR STATIC DOPPLER IN exhaustive search
@@ -133,12 +132,11 @@ def get_simdata(v):
     avg_fp = 0
     avg_fn = 0
     avg_time = 0
-
     ch_occ = 0
     for r in range(runs):
         random.seed(2*r)
     
-        collided_TXset, diff = network.get_predecoded_data()
+        #collided_TXset, diff = network.get_predecoded_data()
         
         network.run(power, dynamic)
         avg_tracked_txs += network.get_tracked_txs()
@@ -151,8 +149,8 @@ def get_simdata(v):
         ch_occ += network.get_OCWchannel_occupancy()
 
         tp, fp, fn, _time = 0,0,0,0
-        if len(collided_TXset):
-            tp, fp, fn, _time = network.exhaustive_search(collided_TXset, diff) # 0,0,0,0
+        #if len(collided_TXset):
+        #    tp, fp, fn, _time = network.exhaustive_search(collided_TXset, diff) # 0,0,0,0
 
         avg_tp += tp
         avg_fp += fp
@@ -172,10 +170,10 @@ def get_simdata(v):
 
 def runsim():
 
-    print('lifan \tCR = 2\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
+    print('driver \tCR = 1\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 3.0, num=40)
-    #netSizes = [5]
+    netSizes = np.logspace(2.0, 4.0, num=20) # np.logspace(1.0, 3.0, num=40)
+    #netSizes = [100000]
 
     # parallel simulation available when NOT USING parallel FHSlocator
     #pool = Pool(processes = 10)
@@ -185,7 +183,7 @@ def runsim():
 
     result = [get_simdata(nodes) for nodes in netSizes]
     
-    basestr = 'cr2-800p-'
+    basestr = 'driver-'
     print(basestr+'tracked_txs,', [round(i[0],6) for i in result])
     print(basestr+'header_drop_packets,', [round(i[1],6) for i in result])
     print(basestr+'decoded_bytes,', [round(i[2],6) for i in result])
@@ -197,7 +195,7 @@ def runsim():
     print(basestr+'fp,', [round(i[8],6) for i in result])
     print(basestr+'fn,', [round(i[9],6) for i in result])
     print(basestr+'time,', [round(i[10],6) for i in result])
-    print(basestr+'ch_occupancy,', [round(i[11],6) for i in result])
+    print(basestr+'chocc,', [round(i[11],6) for i in result])
     
 
 if __name__ == "__main__":
