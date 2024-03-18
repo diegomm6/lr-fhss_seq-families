@@ -45,7 +45,7 @@ class FHSLocator():
         else:        return (subm == 1).sum() >= self.fragmentSize
     
 
-    def create_Tp_parallel(self, seqs):
+    def get_estTXs_parallel(self, seqs):
 
         _input = []
         subseq = int(len(seqs) / 16)
@@ -57,7 +57,7 @@ class FHSLocator():
             k += 1
 
         pool = Pool(processes = 16)
-        result = pool.map(self.create_Tp, _input)
+        result = pool.map(self.get_estTXs, _input)
         pool.close()
         pool.join()
 
@@ -68,30 +68,29 @@ class FHSLocator():
         return Tp
     
 
-    def create_Tp(self, input):
+    def get_estTXs(self, input):
         """
         Exhaustive FHS locator method
         """
 
         seqs, shift = input
         
-        Tp = []
+        estTXs = []
         for t in range(self.simTime - self.max_packet_duration):
             for s, seq in enumerate(seqs):
 
                 possibleShift = []
                 for DS in range(-self.maxDopplerSlots, self.maxDopplerSlots, 1):
 
-                    fits, fitness = self.isPossibeShift(DS, t, seq)
+                    fits, estLen = self.isPossibeShift(DS, t, seq)
                     if fits:
                         possibleShift.append(DS)
                         break # select first possible Doppler Shift that fits seq s at time t
 
                 if len(possibleShift) > 0:
-                    Tp.append((t, s+shift)) #fitness, possibleShift[0]
+                    estTXs.append((t, s+shift, estLen)) #estLen, possibleShift[0]
         
-        return Tp
-
+        return estTXs
 
 
     def isPossibeShift(self, staticShift, startTime, seq):
@@ -141,6 +140,47 @@ class FHSLocator():
         return True, fitness
     
 
+    def get_metrics2(self, trueTXs, estTXs):
+
+        tp = 0 # tx  in trueTXs &  in estTXs
+        fp = 0 # tx !in trueTXs &  in estTXs
+        fn = 0 # tx  in trueTXs & !in estTXs
+
+        trueTXs_len = [l for t,s,l in trueTXs]
+        estTXs_len = [l for t,s,l in estTXs]
+
+        _trueTXs = [[t,s] for t,s,l in trueTXs]
+        _estTXs = [[t,s] for t,s,l in estTXs]
+
+        diff = []
+        for i, tx in enumerate(_trueTXs):
+            if tx in _estTXs:
+                tp += 1
+                diff.append(estTXs_len[_estTXs.index(tx)] - trueTXs_len[i])
+                #print('TP:', t)
+            else:
+                fn += 1
+                #print('FN:', t)
+
+        fplist = []
+        for tx in _estTXs:
+            if tx not in _trueTXs:
+                fp += 1
+                fplist.append(list(tx))
+
+        if len(fplist): # print fp txs in chronological order
+            fplist = np.array(fplist)
+            fplist = fplist[fplist[:, 0].argsort()]
+            #[print('FP:', tuple(t)) for t in fplist]
+
+        diff = np.array(diff)
+        lendiff0 = (diff == 0).sum()
+        lendiff1 = (diff == 1).sum()
+        lendiff2 = (diff == 2).sum()
+        lendiff3 = (diff > 2).sum()
+
+        return tp, fp, fn, lendiff0, lendiff1, lendiff2, lendiff3
+    
     def get_metrics(self, Tt, Tp):
 
         tp = 0 # (t,s,l) in T     and  in T'
@@ -167,4 +207,3 @@ class FHSLocator():
             #[print('FP:', tuple(t)) for t in fplist]
 
         return tp, fp, fn
-    

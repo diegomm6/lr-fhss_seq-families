@@ -104,7 +104,7 @@ def get_simdata(v):
     numGrids = 8
     timeGranularity = 6
     freqGranularity = 25
-    numDecoders = 100
+    numDecoders = 500
     CR = 1
     use_earlydecode = True
     use_earlydrop = True
@@ -132,11 +132,15 @@ def get_simdata(v):
     avg_fp = 0
     avg_fn = 0
     avg_time = 0
+    avg_lendiff0 = 0
+    avg_lendiff1 = 0
+    avg_lendiff2 = 0
+    avg_lendiff3 = 0
     ch_occ = 0
     for r in range(runs):
         random.seed(2*r)
     
-        #collided_TXset, diff = network.get_predecoded_data()
+        collided_TXset, diffM = network.get_predecoded_data()
         
         network.run(power, dynamic)
         avg_tracked_txs += network.get_tracked_txs()
@@ -148,21 +152,26 @@ def get_simdata(v):
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
         ch_occ += network.get_OCWchannel_occupancy()
 
-        tp, fp, fn, _time = 0,0,0,0
-        #if len(collided_TXset):
-        #    tp, fp, fn, _time = network.exhaustive_search(collided_TXset, diff) # 0,0,0,0
+        tp, fp, fn, _time, lendiff0, lendiff1, lendiff2, lendiff3  = 0,0,0,0,0,0,0,0 # lendiff0, lendiff1, lendiff2, lendiff3 
+        if len(collided_TXset):
+            tp, fp, fn, _time, lendiff0, lendiff1, lendiff2, lendiff3  = network.exhaustive_search(collided_TXset, diffM) # 0,0,0,0,0,0,0,0
 
         avg_tp += tp
         avg_fp += fp
         avg_fn += fn
         avg_time += _time
+        avg_lendiff0 += lendiff0
+        avg_lendiff1 += lendiff1
+        avg_lendiff2 += lendiff2
+        avg_lendiff3 += lendiff3
         
         network.restart()
 
 
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
          avg_decoded_hrd_pld / runs, avg_decoded_hdr / runs, avg_decodable_pld / runs,
-         avg_collided_hdr_pld / runs, avg_tp / runs, avg_fp / runs, avg_fn / runs, avg_time / runs, ch_occ / runs]
+         avg_collided_hdr_pld / runs, avg_tp / runs, avg_fp / runs, avg_fn / runs, avg_time / runs, ch_occ / runs,
+         avg_lendiff0 / runs, avg_lendiff1 / runs, avg_lendiff2 / runs, avg_lendiff3 / runs]
     
     print(f"{numNodes}", x)
     return x
@@ -170,9 +179,9 @@ def get_simdata(v):
 
 def runsim():
 
-    print('driver \tCR = 1\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
+    print('driver \tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(2.0, 4.0, num=20) # np.logspace(1.0, 3.0, num=40)
+    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 3.0, num=40)
     #netSizes = [100000]
 
     # parallel simulation available when NOT USING parallel FHSlocator
@@ -196,6 +205,10 @@ def runsim():
     print(basestr+'fn,', [round(i[9],6) for i in result])
     print(basestr+'time,', [round(i[10],6) for i in result])
     print(basestr+'chocc,', [round(i[11],6) for i in result])
+    print(basestr+'lendiff0,', [round(i[12],6) for i in result])
+    print(basestr+'lendiff1,', [round(i[13],6) for i in result])
+    print(basestr+'lendiff2,', [round(i[14],6) for i in result])
+    print(basestr+'lendiff3,', [round(i[15],6) for i in result])
     
 
 if __name__ == "__main__":

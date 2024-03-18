@@ -244,21 +244,21 @@ class LoRaNetwork():
     def exhaustive_search(self, transmissions: list[LoRaTransmission], rcvM: np.ndarray):
 
         # create tx list in the form (time, seqid, seqlength)
-        Tt = []
+        trueTXs = []
         for tx in transmissions:
             ds = round(tx.dopplerShift[0] / self.freqPerSlot)
-            Tt.append((tx.startSlot, tx.seqid)) # , len(tx.sequence), ds
+            trueTXs.append((tx.startSlot, tx.seqid, len(tx.sequence))) # , len(tx.sequence), ds
         
         self.fhsLocator.set_RXmatrix(rcvM)
 
         start = time.time()
-        Tp = self.fhsLocator.create_Tp_parallel(self.FHSfam.FHSfam)
+        estTXs = self.fhsLocator.get_estTXs_parallel(self.FHSfam.FHSfam)
         solve_time = time.time()-start
 
         # self.printknapSack(self.numNodes, Tp, RXbinary_matrix)
-        tp, fp, fn = self.fhsLocator.get_metrics(Tt, Tp)
+        tp, fp, fn, lendiff0, lendiff1, lendiff2, lendiff3 = self.fhsLocator.get_metrics2(trueTXs, estTXs)
 
-        return tp, fp, fn, solve_time
+        return tp, fp, fn, solve_time, lendiff0, lendiff1, lendiff2, lendiff3
     
 
     ######################################
