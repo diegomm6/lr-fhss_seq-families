@@ -174,12 +174,12 @@ class FHSLocator():
             #[print('FP:', tuple(t)) for t in fplist]
 
         diff = np.array(diff)
-        lendiff0 = (diff == 0).sum()
-        lendiff1 = (diff == 1).sum()
-        lendiff2 = (diff == 2).sum()
-        lendiff3 = (diff > 2).sum()
+        lendiff = [(diff <= -5).sum(), (diff == -4).sum(), (diff == -3).sum(), (diff == -2).sum(), (diff == -1).sum(),
+                   (diff == 0).sum(),
+                   (diff == 1).sum(), (diff == 2).sum(), (diff == 3).sum(), (diff == 4).sum(), (diff >= 5).sum()]
 
-        return tp, fp, fn, lendiff0, lendiff1, lendiff2, lendiff3
+        return tp, fp, fn, np.array(lendiff)
+    
     
     def get_metrics(self, Tt, Tp):
 

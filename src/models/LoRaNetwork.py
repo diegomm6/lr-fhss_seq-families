@@ -256,9 +256,9 @@ class LoRaNetwork():
         solve_time = time.time()-start
 
         # self.printknapSack(self.numNodes, Tp, RXbinary_matrix)
-        tp, fp, fn, lendiff0, lendiff1, lendiff2, lendiff3 = self.fhsLocator.get_metrics2(trueTXs, estTXs)
+        tp, fp, fn, lendiff = self.fhsLocator.get_metrics2(trueTXs, estTXs)
 
-        return tp, fp, fn, solve_time, lendiff0, lendiff1, lendiff2, lendiff3
+        return tp, fp, fn, solve_time, lendiff
     
 
     ######################################

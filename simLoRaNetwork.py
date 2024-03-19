@@ -132,10 +132,7 @@ def get_simdata(v):
     avg_fp = 0
     avg_fn = 0
     avg_time = 0
-    avg_lendiff0 = 0
-    avg_lendiff1 = 0
-    avg_lendiff2 = 0
-    avg_lendiff3 = 0
+    avg_lendiff = np.zeros(11)
     ch_occ = 0
     for r in range(runs):
         random.seed(2*r)
@@ -152,18 +149,16 @@ def get_simdata(v):
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
         ch_occ += network.get_OCWchannel_occupancy()
 
-        tp, fp, fn, _time, lendiff0, lendiff1, lendiff2, lendiff3  = 0,0,0,0,0,0,0,0 # lendiff0, lendiff1, lendiff2, lendiff3 
+        tp, fp, fn, _time = 0,0,0,0
+        lendiff = np.zeros(11)
         if len(collided_TXset):
-            tp, fp, fn, _time, lendiff0, lendiff1, lendiff2, lendiff3  = network.exhaustive_search(collided_TXset, diffM) # 0,0,0,0,0,0,0,0
+            tp, fp, fn, _time, lendiff  = network.exhaustive_search(collided_TXset, diffM) 
 
         avg_tp += tp
         avg_fp += fp
         avg_fn += fn
         avg_time += _time
-        avg_lendiff0 += lendiff0
-        avg_lendiff1 += lendiff1
-        avg_lendiff2 += lendiff2
-        avg_lendiff3 += lendiff3
+        avg_lendiff = np.add(avg_lendiff, lendiff)
         
         network.restart()
 
@@ -171,7 +166,7 @@ def get_simdata(v):
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
          avg_decoded_hrd_pld / runs, avg_decoded_hdr / runs, avg_decodable_pld / runs,
          avg_collided_hdr_pld / runs, avg_tp / runs, avg_fp / runs, avg_fn / runs, avg_time / runs, ch_occ / runs,
-         avg_lendiff0 / runs, avg_lendiff1 / runs, avg_lendiff2 / runs, avg_lendiff3 / runs]
+         avg_lendiff / runs]
     
     print(f"{numNodes}", x)
     return x
@@ -205,11 +200,10 @@ def runsim():
     print(basestr+'fn,', [round(i[9],6) for i in result])
     print(basestr+'time,', [round(i[10],6) for i in result])
     print(basestr+'chocc,', [round(i[11],6) for i in result])
-    print(basestr+'lendiff0,', [round(i[12],6) for i in result])
-    print(basestr+'lendiff1,', [round(i[13],6) for i in result])
-    print(basestr+'lendiff2,', [round(i[14],6) for i in result])
-    print(basestr+'lendiff3,', [round(i[15],6) for i in result])
-    
+
+    alllendiff = [i[12] for i in result]
+    print(alllendiff)
+
 
 if __name__ == "__main__":
 
