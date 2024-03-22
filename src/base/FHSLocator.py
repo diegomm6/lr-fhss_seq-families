@@ -152,11 +152,15 @@ class FHSLocator():
         _trueTXs = [[t,s] for t,s,l in trueTXs]
         _estTXs = [[t,s] for t,s,l in estTXs]
 
-        diff = []
+        lenmatch = 0
+        minlenerr = 0
         for i, tx in enumerate(_trueTXs):
             if tx in _estTXs:
                 tp += 1
-                diff.append(estTXs_len[_estTXs.index(tx)] - trueTXs_len[i])
+                if (estTXs_len[_estTXs.index(tx)] - trueTXs_len[i]) == 0:
+                    lenmatch += 1
+                if estTXs_len[_estTXs.index(tx)] == self.min_seqlength and trueTXs_len[i] != self.min_seqlength:
+                    minlenerr += 1
                 #print('TP:', t)
             else:
                 fn += 1
@@ -173,12 +177,7 @@ class FHSLocator():
             fplist = fplist[fplist[:, 0].argsort()]
             #[print('FP:', tuple(t)) for t in fplist]
 
-        diff = np.array(diff)
-        lendiff = [(diff <= -5).sum(), (diff == -4).sum(), (diff == -3).sum(), (diff == -2).sum(), (diff == -1).sum(),
-                   (diff == 0).sum(),
-                   (diff == 1).sum(), (diff == 2).sum(), (diff == 3).sum(), (diff == 4).sum(), (diff >= 5).sum()]
-
-        return tp, fp, fn, np.array(lendiff)
+        return tp, fp, fn, lenmatch, minlenerr
     
     
     def get_metrics(self, Tt, Tp):

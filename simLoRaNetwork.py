@@ -104,7 +104,7 @@ def get_simdata(v):
     numGrids = 8
     timeGranularity = 6
     freqGranularity = 25
-    numDecoders = 500
+    numDecoders = 800
     CR = 1
     use_earlydecode = True
     use_earlydrop = True
@@ -132,7 +132,8 @@ def get_simdata(v):
     avg_fp = 0
     avg_fn = 0
     avg_time = 0
-    avg_lendiff = np.zeros(11)
+    avg_lenmatch = 0 
+    avg_minlenerr = 0
     ch_occ = 0
     for r in range(runs):
         random.seed(2*r)
@@ -149,8 +150,7 @@ def get_simdata(v):
         avg_collided_hdr_pld += network.get_collided_hdr_pld()
         ch_occ += network.get_OCWchannel_occupancy()
 
-        tp, fp, fn, _time = 0,0,0,0
-        lendiff = np.zeros(11)
+        tp, fp, fn, _time, lenmatch, minlenerr = 0,0,0,0,0,0
         if len(collided_TXset):
             tp, fp, fn, _time, lendiff  = network.exhaustive_search(collided_TXset, diffM) 
 
@@ -158,7 +158,8 @@ def get_simdata(v):
         avg_fp += fp
         avg_fn += fn
         avg_time += _time
-        avg_lendiff = np.add(avg_lendiff, lendiff)
+        avg_lenmatch += lenmatch
+        avg_minlenerr += minlenerr
         
         network.restart()
 
@@ -166,7 +167,7 @@ def get_simdata(v):
     x = [avg_tracked_txs / runs, avg_header_drop_packets / runs, avg_decoded_bytes / runs,
          avg_decoded_hrd_pld / runs, avg_decoded_hdr / runs, avg_decodable_pld / runs,
          avg_collided_hdr_pld / runs, avg_tp / runs, avg_fp / runs, avg_fn / runs, avg_time / runs, ch_occ / runs,
-         avg_lendiff / runs]
+         avg_lenmatch / runs, avg_minlenerr / runs]
     
     print(f"{numNodes}", x)
     return x
@@ -174,9 +175,9 @@ def get_simdata(v):
 
 def runsim():
 
-    print('driver \tCR = 1\tprocessors = 500\tearly d/d = YES\thdr drop = NO')
+    print('driver \tCR = 1\tprocessors = 800\tearly d/d = YES\thdr drop = NO')
 
-    netSizes = np.logspace(1.0, 3.0, num=20) # np.logspace(1.0, 3.0, num=40)
+    netSizes = np.logspace(1.0, 3.0, num=40) # np.logspace(1.0, 3.0, num=40)
     #netSizes = [100000]
 
     # parallel simulation available when NOT USING parallel FHSlocator
@@ -200,9 +201,9 @@ def runsim():
     print(basestr+'fn,', [round(i[9],6) for i in result])
     print(basestr+'time,', [round(i[10],6) for i in result])
     print(basestr+'chocc,', [round(i[11],6) for i in result])
+    print(basestr+'lenmatch,', [round(i[12],6) for i in result])
+    print(basestr+'minlenerr,', [round(i[13],6) for i in result])
 
-    alllendiff = [i[12] for i in result]
-    print(alllendiff)
 
 
 if __name__ == "__main__":
