@@ -152,7 +152,7 @@ def get_simdata(v):
 
         tp, fp, fn, _time, lenmatch, minlenerr = 0,0,0,0,0,0
         if len(collided_TXset):
-            tp, fp, fn, _time, lendiff  = network.exhaustive_search(collided_TXset, diffM) 
+            tp, fp, fn, _time, lenmatch, minlenerr  = network.exhaustive_search(collided_TXset, diffM) 
 
         avg_tp += tp
         avg_fp += fp
