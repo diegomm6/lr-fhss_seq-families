@@ -32,11 +32,11 @@ class LoRaNetwork():
 
         self.headerSlots = round(timeGranularity * HDR_TIME / FRG_TIME)
         self.freqPerSlot = OBW_BW / self.freqGranularity
-        self.frequencySlots = int(round(OCW_RX_BW / self.freqPerSlot))
+        self.frequencySlots = numOBW #int(round(OCW_RX_BW / self.freqPerSlot))
 
         OCWchannelTXBW = numOBW * OBW_BW  # OCW transmitter bandwidth in Hz
         self.maxFreqShift = (OCW_RX_BW - OCWchannelTXBW) / 2
-        self.baseFreq = round(self.maxFreqShift / self.freqPerSlot) # freq offset to center TX window over RX window
+        self.baseFreq = 0 # round(self.maxFreqShift / self.freqPerSlot) # freq offset to center TX window over RX window
 
         assert CR==1 or CR==2, "Only CR 1/3 and CR 2/3 supported"
         self.numHeaders = 3 # CR == 1
@@ -142,16 +142,10 @@ class LoRaNetwork():
         # add transmissions to received matrix
         for tx in transmissions:
 
-            dopplershift = round(tx.dopplerShift[0] / self.freqPerSlot)
-
             time = tx.startSlot
             for fh, obw in enumerate(tx.sequence):
 
-                # variable doppler shift per header / fragment
-                if dynamic:
-                    dopplershift = round(tx.dopplerShift[fh] / self.freqPerSlot)
-
-                startFreq = self.baseFreq + obw * self.freqGranularity + dopplershift
+                startFreq = self.baseFreq + obw * self.freqGranularity 
                 endFreq = startFreq + self.freqGranularity
 
                 # power based received matrix

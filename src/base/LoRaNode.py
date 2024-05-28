@@ -2,7 +2,7 @@ import random
 import numpy as np
 from src.base.base import *
 from src.base.LoRaTransmission import LoRaTransmission
-from src.families.LR_FHSS_DriverMethod import FHSfamily
+from src.families.FHSfamily import FHSfamily
 
 class LoRaNode():
     """
