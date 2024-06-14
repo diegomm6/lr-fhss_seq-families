@@ -10,9 +10,9 @@ import time
 
 def plot_rcvM():
 
-    numNodes = 100
+    numNodes = 1000
 
-    simTime = 500
+    simTime = 1000
     numOCW = 1
     numOBW = 280
     numGrids = 8
@@ -53,9 +53,9 @@ def plot_rcvM():
         plt.title(f'Spectogram of received signals [dB/Hz], {numNodes} txs, 1 OCW channel')
         plt.xlabel('s')
         plt.ylabel('kHz', fontsize=18)
-        #plt.show()
-        plt.savefig(save)
-        #plt.close('all')
+        plt.show()
+        #plt.savefig(save)
+        plt.close('all')
 
     def print_m2(m, save='spectogram.pdf'):
         fslots, tslots = count_static_rcvM[0].shape
@@ -71,9 +71,9 @@ def plot_rcvM():
         plt.xticks(fontsize=16)
         plt.yticks(fontsize=16)
         plt.clim(-135,-115)
-        #plt.show()
-        plt.savefig(save, bbox_inches='tight')
-        #plt.close('all')
+        plt.show()
+        #plt.savefig(save, bbox_inches='tight')
+        plt.close('all')
 
     # binary - noise (0), signal/interference (1)
     binary_matrix = count_dynamic_rcvM.copy()[0]
@@ -105,11 +105,12 @@ def plot_rcvM():
 
     #print(network.get_OCWchannel_occupancy())
 
+    print_m(count_dynamic_rcvM[0], 'counts.png')
     #print_m(binary_matrix, 'bin.png')
     #print_m(value3_matrix, '3value.png')
     #print_m(decoded_m[0], 'dcdd.png')
     #print_m(diff, 'diff.png')
-    print_m2(spec_density)
+    #print_m2(spec_density)
 
 
 def get_simdata(v):
@@ -129,7 +130,7 @@ def get_simdata(v):
     familyname = "driver" # driver - lifan
 
     power = False
-    dynamic = True # NO SUPPORT FOR STATIC DOPPLER IN exhaustive search
+    dynamic = False # NO SUPPORT FOR STATIC DOPPLER IN exhaustive search
     collision_method = "strict" # strict - SINR
 
     numNodes = int(v)
@@ -168,8 +169,8 @@ def get_simdata(v):
         ch_occ += network.get_OCWchannel_occupancy()
 
         tp, fp, fn, _time, lenmatch, minlenerr = 0,0,0,0,0,0
-        if len(collided_TXset):
-            tp, fp, fn, _time, lenmatch, minlenerr  = network.exhaustive_search(collided_TXset, diffM) 
+        #if len(collided_TXset):
+        #    tp, fp, fn, _time, lenmatch, minlenerr  = network.exhaustive_search(collided_TXset, diffM) 
 
         avg_tp += tp
         avg_fp += fp

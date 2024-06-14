@@ -1,58 +1,30 @@
-import csv
-import random
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-from multiprocessing import Pool
-from src.models.LoRaNetwork import LoRaNetwork
 from src.base.base import *
-import time
-import os
-from PIL import Image
+from src.base.DatasetGenerator import DatasetGenerator
 
+def create_dataset():
 
-def createdataset():
-
-    runs = 100
-    simTime = 500
-    numOCW = 1
+    CR = 1
     numOBW = 280
-    numGrids = 8
     timeGranularity = 6
     freqGranularity = 1
-    numDecoders = 800
-    CR = 1
-    use_earlydecode = True
-    use_earlydrop = True
-    use_headerdrop = False
-    familyname = "driver" # driver - lifan
+    dynamic = False
 
-    power = False
-    dynamic = True # NO SUPPORT FOR STATIC DOPPLER IN exhaustive search
-    collision_method = "strict" # strict - SINR
+    numTX_list = [1] * 3
+    numFragments_list = [31] * 3
+    runs_list = [384] * 3
 
+    multiTX = [2, 5, 10, 20, 50, 100, 200, 300]
 
-    for r in range(runs):
-        random.seed(2*r)
+    numFragments_list += ([0] * len(multiTX)) + ([31] * len(multiTX))
+    runs_list += [100] * (len(multiTX) * 2)
+    numTX_list += multiTX * 2
 
-        numNodes = (r+1) * 10
-        network = LoRaNetwork(numNodes, familyname, numOCW, numOBW, numGrids, CR, timeGranularity,
-                        freqGranularity, simTime, numDecoders, use_earlydecode, use_earlydrop,
-                        use_headerdrop, collision_method)
-    
-        transmissions = network.TXset
-        count_dynamic_rcvM = network.get_rcvM(transmissions, power=False, dynamic=True)
+    datasetGenerator = DatasetGenerator(CR, numOBW, freqGranularity, timeGranularity)
 
-        binary_matrix = count_dynamic_rcvM.copy()[0]
-        binary_matrix[binary_matrix > 1] = 255
+    datasetGenerator.create_boundingbox_dataset(dynamic, "dataset1", runs_list, numTX_list, numFragments_list)
+    #datasetGenerator.create_boundingbox_dataset(dynamic, "dataset1", [3]*4, [1, 1, 3, 20], [0]*4)
 
-        image = Image.fromarray(binary_matrix)
-        image = image.convert('RGB')
-
-        image.save(os.path.join(os.getcwd(), f"imgdataset\img{r:03d}.png"))
-
-        del network
 
 if __name__ == "__main__":
-    createdataset()
-    
+    random.seed(123)
+    create_dataset()

@@ -1,3 +1,4 @@
+from src.base.base import *
 
 class LoRaTransmission():
     """
