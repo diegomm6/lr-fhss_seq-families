@@ -1,6 +1,4 @@
 
-LR-FHSS network simulation for collision analysis. Two models available:
+LR-FHSS network simulation for collision analysis. 
 
-- ```./src/models/LoRaNetworkLite.py``` has unlimited decoding capacity, basic model, deprecated.
-
-- ```./src/models/LoRaNetwork.py``` has limited decoding capacity depending on the available Processors in the Gateway. Support for count-based and power-based collision analysis. Support for dynamic doppler.
+Use the ```main.py``` file to simulate a LR-FHSS network and obtain collision and decoding rates data. The FHS Locator can be turned on to perfomr headerless detections. Support for count-based and power-based collision analysis. Support for dynamic doppler.

@@ -10,9 +10,9 @@ import time
 
 def plot_rcvM():
 
-    numNodes = 1000
+    numNodes = 100
 
-    simTime = 1000
+    simTime = 500
     numOCW = 1
     numOBW = 280
     numGrids = 8
@@ -64,16 +64,16 @@ def plot_rcvM():
         fig = plt.figure(figsize=(14,10))
         im = plt.imshow(m, extent =[0, tmax, 0, fmax], interpolation ='none', aspect='auto')
         cbar = fig.colorbar(im)
-        cbar.ax.tick_params(labelsize=18)
-        plt.title(f'Spectogram of received signals [dB/Hz]', fontsize=16)
-        plt.xlabel('s', fontsize=18)
-        plt.ylabel('kHz', fontsize=18)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
+        cbar.ax.tick_params(labelsize=20)
+        plt.title(f'Spectogram of received signals [dB/Hz]', fontsize=20)
+        plt.xlabel('s', fontsize=20)
+        plt.ylabel('kHz', fontsize=20)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
         plt.clim(-135,-115)
-        plt.show()
-        #plt.savefig(save, bbox_inches='tight')
-        plt.close('all')
+        #plt.show()
+        plt.savefig(save, bbox_inches='tight')
+        #plt.close('all')
 
     # binary - noise (0), signal/interference (1)
     binary_matrix = count_dynamic_rcvM.copy()[0]
@@ -102,15 +102,17 @@ def plot_rcvM():
 
     # received power
     spec_density = mW2dBm(power_dynamic_rcvM[0] /488)
+    spec_density[1600:1626,:] = -10
+    spec_density[8600:8626,:] = -10
 
-    #print(network.get_OCWchannel_occupancy())
+    #print(network.get_OCWch2annel_occupancy())
 
-    print_m(count_dynamic_rcvM[0], 'counts.png')
+    #print_m(count_dynamic_rcvM[0], 'counts.png')
     #print_m(binary_matrix, 'bin.png')
     #print_m(value3_matrix, '3value.png')
     #print_m(decoded_m[0], 'dcdd.png')
     #print_m(diff, 'diff.png')
-    #print_m2(spec_density)
+    print_m2(spec_density)
 
 
 def get_simdata(v):
