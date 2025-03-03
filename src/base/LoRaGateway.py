@@ -1,6 +1,6 @@
 import numpy as np
 from src.base.Processor import Processor
-from src.base.LoRaTransmission import LoRaTransmission
+from src.base.LRFHSSTransmission import LRFHSSTransmission
 
 class LoRaGateway():
 
@@ -43,7 +43,7 @@ class LoRaGateway():
         for processor in self._processors:
             processor.reset()
 
-    def get_decoded_headers(self) -> list[LoRaTransmission]:
+    def get_decoded_headers(self) -> list[LRFHSSTransmission]:
         """
         Return decoded headers
         """
@@ -134,7 +134,7 @@ class LoRaGateway():
         return collided_hdr_pld
     
 
-    def predecode(self, transmissions: list[LoRaTransmission], 
+    def predecode(self, transmissions: list[LRFHSSTransmission], 
                   rcvM: np.ndarray, dynamic: bool) -> None:
 
         freeUpTimes = np.zeros(self.numDecoders)
@@ -147,7 +147,7 @@ class LoRaGateway():
                     break
 
 
-    def run(self, transmissions: list[LoRaTransmission],
+    def run(self, transmissions: list[LRFHSSTransmission],
             rcvM: np.ndarray, dynamic: bool) -> None:
 
         freeUpTimes = np.zeros(self.numDecoders)

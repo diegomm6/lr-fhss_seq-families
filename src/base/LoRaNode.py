@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from src.base.base import *
-from src.base.LoRaTransmission import LoRaTransmission
+from src.base.LRFHSSTransmission import LRFHSSTransmission
 from src.families.LR_FHSS_DriverMethod import FHSfamily
 
 class LoRaNode():
@@ -76,7 +76,7 @@ class LoRaNode():
         return hdr_frg_times
     
 
-    def get_transmissions(self, family: FHSfamily) -> list[LoRaTransmission]:
+    def get_transmissions(self, family: FHSfamily) -> list[LRFHSSTransmission]:
         """
         Obtain all transmission during simulation time for this node.
         The current model only support one transmission per node,
@@ -115,7 +115,7 @@ class LoRaNode():
         dynamicDoppler = [dopplerShift(t) for t in hdr_frg_times]
         #staticDoppler = [0 for t in hdr_frg_times]
 
-        tx = LoRaTransmission(self.id, self.id, startSlot, ocw, numHeaders, payload_size, numFragments,
+        tx = LRFHSSTransmission(self.id, self.id, startSlot, ocw, numHeaders, payload_size, numFragments,
                               sequence, seqid, dis2sat, dynamicDoppler, self.TXpower_dB)
 
         return [tx]

@@ -5,7 +5,7 @@ import numpy as np
 from src.base.base import *
 from src.base.LoRaNode import LoRaNode
 from src.base.LoRaGateway import LoRaGateway
-from src.base.LoRaTransmission import LoRaTransmission
+from src.base.LRFHSSTransmission import LRFHSSTransmission
 from src.families.LiFanMethod import LiFanFamily
 from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
 from src.families.LempelGreenbergMethod import LempelGreenbergFamily
@@ -87,7 +87,7 @@ class LoRaNetwork():
             raise Exception(f"Invalid family name '{familyname}'")
         
 
-    def set_transmissions(self) -> list[LoRaTransmission]:
+    def set_transmissions(self) -> list[LRFHSSTransmission]:
 
         transmissions = []
         node : LoRaNode
@@ -119,7 +119,7 @@ class LoRaNetwork():
     # TIME-FREQ MATRIX GENERATOR METHODS
     ####################################
 
-    def get_rcvM(self, transmissions: list[LoRaTransmission], power: bool, dynamic: bool) -> np.ndarray:
+    def get_rcvM(self, transmissions: list[LRFHSSTransmission], power: bool, dynamic: bool) -> np.ndarray:
         """
         Create received matrix from given transmissions set in 4 ways.
 
@@ -227,7 +227,7 @@ class LoRaNetwork():
         return collided_TXset, diff
     
 
-    def get_collided_TXset(self) -> list[LoRaTransmission]:
+    def get_collided_TXset(self) -> list[LRFHSSTransmission]:
 
         TXsetids = [tx.id for tx in self.TXset]
         decoded_headers = self.gateway.get_decoded_headers()
@@ -241,7 +241,7 @@ class LoRaNetwork():
         return collidedTXset
 
             
-    def exhaustive_search(self, transmissions: list[LoRaTransmission], rcvM: np.ndarray):
+    def exhaustive_search(self, transmissions: list[LRFHSSTransmission], rcvM: np.ndarray):
 
         # create tx list in the form (time, seqid, seqlength)
         trueTXs = []
@@ -358,7 +358,7 @@ class LoRaNetwork():
         decoded = self.gateway.get_decoded()
 
         Tt_decoded = []
-        tx : LoRaTransmission
+        tx : LRFHSSTransmission
         for tx, pld_status in decoded:
             Tt_decoded.append((tx.startSlot, tx.seqid))
 

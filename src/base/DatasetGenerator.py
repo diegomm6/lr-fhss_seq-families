@@ -2,7 +2,7 @@ import random, json, os
 import numpy as np
 from src.base.base import *
 from PIL import Image
-from src.base.LoRaTransmission import LoRaTransmission
+from src.base.LRFHSSTransmission import LRFHSSTransmission
 from src.families.LR_FHSS_DriverMethod import LR_FHSS_DriverFamily
 
 
@@ -61,7 +61,7 @@ class DatasetGenerator():
         return hdr_frg_times
     
 
-    def get_transmission(self, seq_id, numFragments) -> LoRaTransmission:
+    def get_transmission(self, seq_id, numFragments) -> LRFHSSTransmission:
 
         if numFragments==0:
             numFragments = random.randrange(8, 32)
@@ -80,14 +80,14 @@ class DatasetGenerator():
         hdr_frg_times = self.calculate_hdr_frg_times(time, self.numHeaders, numFragments)
         dynamicDoppler = [dopplerShift(t) for t in hdr_frg_times]
 
-        tx = LoRaTransmission(self.id, self.id, startSlot, self.OCW, self.numHeaders,
+        tx = LRFHSSTransmission(self.id, self.id, startSlot, self.OCW, self.numHeaders,
                               payload_size, numFragments, sequence, seq_id, dis2sat,
                               dynamicDoppler, self.TXpower_dB)
 
         return tx
     
 
-    def get_TXlist(self, numTX, numFragments) -> list[LoRaTransmission]:
+    def get_TXlist(self, numTX, numFragments) -> list[LRFHSSTransmission]:
 
         TXlist = []
         for i in range(numTX):
@@ -97,7 +97,7 @@ class DatasetGenerator():
         return TXlist
     
 
-    def get_rcvM(self, transmissions: list[LoRaTransmission], dynamic: bool) -> np.ndarray:
+    def get_rcvM(self, transmissions: list[LRFHSSTransmission], dynamic: bool) -> np.ndarray:
 
         rcvM = np.zeros((self.frequencySlots, self.simTime))
 
@@ -145,7 +145,7 @@ class DatasetGenerator():
 
     # calcualte LR-FHSS signal coordiantes in spectogram as lower and upper frquency slot
     # and start and end time slot
-    def get_boundingbox(self, tx: LoRaTransmission, dynamic:bool) -> list[int]:
+    def get_boundingbox(self, tx: LRFHSSTransmission, dynamic:bool) -> list[int]:
 
         totalSlots = self.headerSlots * tx.numHeaders + self.timeGranularity * tx.numFragments
         endSlot = tx.startSlot + totalSlots - 1
@@ -245,7 +245,7 @@ class DatasetGenerator():
 
 
     # returns a string containing the labels for a list of transmissions
-    def get_label(self, transmissions: list[LoRaTransmission]) -> str:
+    def get_label(self, transmissions: list[LRFHSSTransmission]) -> str:
 
         TXSeqIds = [tx.seqid for tx in transmissions]
 

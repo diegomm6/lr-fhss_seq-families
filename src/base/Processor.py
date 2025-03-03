@@ -1,6 +1,6 @@
 import numpy as np
 from src.base.base import *
-from src.base.LoRaTransmission import LoRaTransmission
+from src.base.LRFHSSTransmission import LRFHSSTransmission
 
 class Processor():
     """
@@ -13,7 +13,7 @@ class Processor():
     Attributes:
         granularity (int): The granularity of the decoding process, in slots.
         CR (int): The coding rate of the LoRa transmissions.
-        _current_tx (LoRaTransmission): The current transmission being decoded.
+        _current_tx (LRFHSSTransmission): The current transmission being decoded.
         _fragment_status (list[int]): Status of each fragment of the current frame.
         is_busy (bool): Whether the processor is currently decoding a transmission.
         collided_packets (int): The number of transmissions that have collided.
@@ -124,7 +124,7 @@ class Processor():
         return (collidedslots/timeslots) > self.symbolThreshold
     
 
-    def predecode_headers(self, tx: LoRaTransmission, rcvM: np.ndarray, dynamic: bool) -> int:
+    def predecode_headers(self, tx: LRFHSSTransmission, rcvM: np.ndarray, dynamic: bool) -> int:
 
         collided_headers = 0
         dopplershift = round(tx.dopplerShift[0] / self.freqPerSlot)
@@ -165,7 +165,7 @@ class Processor():
         return endTime
 
 
-    def decode(self, tx: LoRaTransmission, rcvM: np.ndarray, dynamic: bool) -> int:
+    def decode(self, tx: LRFHSSTransmission, rcvM: np.ndarray, dynamic: bool) -> int:
         """
         Determine status of incoming transmissions and return free up time
         """
@@ -258,7 +258,7 @@ class Processor():
                 time = endTime
         
 
-    def get_power_estimations(self, tx: LoRaTransmission, rcvM: np.ndarray, dynamic: bool) -> bool:
+    def get_power_estimations(self, tx: LRFHSSTransmission, rcvM: np.ndarray, dynamic: bool) -> bool:
 
         dopplershift = round(tx.dopplerShift[0] / self.freqPerSlot)
 
